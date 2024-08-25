@@ -28,6 +28,7 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "APIData.h"
+#include "WebExtensionTabIdentifier.h"
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 

@@ -77,13 +77,14 @@ public:
     const URL& baseURL() const { return m_baseURL; }
     const String& uniqueIdentifier() const { return m_uniqueIdentifier; }
 
+#if PLATFORM(COCOA)
     NSDictionary *manifest() const { return m_manifest.get(); }
 
     double manifestVersion() const { return m_manifestVersion; }
     bool supportsManifestVersion(double version) const { return manifestVersion() >= version; }
 
     _WKWebExtensionLocalization *localization() const { return m_localization.get(); }
-
+#endif
     bool isSessionStorageAllowedInContentScripts() const { return m_isSessionStorageAllowedInContentScripts; }
 
     bool inTestingMode() const;
@@ -221,8 +222,10 @@ private:
     URL m_baseURL;
     String m_uniqueIdentifier;
     HashSet<String> m_unsupportedAPIs;
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionLocalization> m_localization;
     RetainPtr<NSDictionary> m_manifest;
+#endif
     double m_manifestVersion { 0 };
     bool m_isSessionStorageAllowedInContentScripts { false };
     mutable PermissionsMap m_grantedPermissions;

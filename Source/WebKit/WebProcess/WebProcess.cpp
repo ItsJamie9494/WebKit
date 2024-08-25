@@ -585,7 +585,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
     for (auto& scheme : parameters.urlSchemesRegisteredAsCanDisplayOnlyIfCanRequest)
         registerURLSchemeAsCanDisplayOnlyIfCanRequest(scheme);
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     for (auto& scheme : parameters.urlSchemesRegisteredAsWebExtensions)
         WebExtensionMatchPattern::registerCustomURLScheme(scheme);
 #endif
@@ -814,7 +814,7 @@ void WebProcess::registerURLSchemeAsCanDisplayOnlyIfCanRequest(const String& url
     LegacySchemeRegistry::registerAsCanDisplayOnlyIfCanRequest(urlScheme);
 }
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
 void WebProcess::registerURLSchemeAsWebExtension(const String& urlScheme) const
 {
     WebExtensionMatchPattern::registerCustomURLScheme(urlScheme);

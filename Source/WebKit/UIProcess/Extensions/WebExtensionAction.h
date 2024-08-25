@@ -128,8 +128,10 @@ public:
     void setPopupPopoverAppearance(Appearance);
 #endif
 
+#if PLATFORM(COCOA)
     WKWebView *popupWebView();
     bool hasPopupWebView() const { return !!m_popupWebView; }
+#endif
 
     bool presentsPopupWhenReady() const { return m_presentsPopupWhenReady; }
     bool popupPresented() const { return m_popupPresented; }
@@ -167,9 +169,10 @@ private:
     RetainPtr<_WKWebExtensionActionPopover> m_popupPopover;
     Appearance m_popoverAppearance { Appearance::Default };
 #endif
-
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionActionWebView> m_popupWebView;
     RetainPtr<_WKWebExtensionActionWebViewDelegate> m_popupWebViewDelegate;
+#endif
     String m_customPopupPath;
     String m_popupWebViewInspectionName;
 
