@@ -58,6 +58,8 @@ public:
 
     void operator delete(Value*, std::destroying_delete_t);
 
+    bool operator!() const { return isNull(); }
+
     ~Value()
     {
         switch (m_type) {
@@ -210,6 +212,8 @@ protected:
     const_iterator begin() const { return m_map.begin(); }
     const_iterator end() const { return m_map.end(); }
 
+    DataStorage::KeysConstIteratorRange keys() const { return m_map.keys(); }
+
     unsigned size() const { return m_map.size(); }
 
     // FIXME: <http://webkit.org/b/179847> remove these functions when legacy InspectorObject symbols are no longer needed.
@@ -256,6 +260,8 @@ public:
 
     using ObjectBase::begin;
     using ObjectBase::end;
+
+    using ObjectBase::keys;
 
     using ObjectBase::size;
 };

@@ -124,19 +124,18 @@ void WebExtensionContext::actionSetIcon(std::optional<WebExtensionWindowIdentifi
         return;
     }
 
-    id parsedIcons = parseJSON(iconsJSON, JSONOptions::FragmentsAllowed);
-    if (auto *dictionary = dynamic_objc_cast<NSDictionary>(parsedIcons))
-        action.value()->setIcons(dictionary);
+    auto iconDictionary = JSON::Value::parseJSON(iconDictionaryJSON);
+    if (iconDictionary && iconsDictionary->asObject())
+        action.value()->setIcons(iconDictionary.releaseNonNull());
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    else if (auto *array = dynamic_objc_cast<NSArray>(parsedIcons))
-        action.value()->setIconVariants(array);
+    else if (iconDictionary && iconsDictionary->asArray())
+        action.value()->setIconVariants(iconDictionary.releaseNonNull());
 #endif
     else {
-        action.value()->setIcons(nil);
+        action.value()->setIcons(JSON::Value::null());
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-        action.value()->setIconVariants(nil);
+        action.value()->setIconVariants(JSON::Value::null());
 #endif
-    }
 
     completionHandler({ });
 }

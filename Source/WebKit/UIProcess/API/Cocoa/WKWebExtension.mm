@@ -30,10 +30,16 @@
 #import "config.h"
 #import "WKWebExtensionInternal.h"
 
+#import "APIData.h"
+#import "WKNSData.h"
+#import "WKNSDictionary.h"
+#import "WKNSError.h"
 #import "CocoaHelpers.h"
 #import "CocoaImage.h"
 #import "WKWebExtensionMatchPatternInternal.h"
 #import "WebExtension.h"
+#import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/URL.h>
 
 NSErrorDomain const WKWebExtensionErrorDomain = @"WKWebExtensionErrorDomain";
 
@@ -51,10 +57,10 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     // Use an async dispatch in the meantime to prevent clients from expecting synchronous results.
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSError * __autoreleasing error;
-        Ref result = WebKit::WebExtension::create(appExtensionBundle, &error);
+        Ref result = WebKit::WebExtension::create(appExtensionBundle);
 
-        if (error) {
+        if (!result->manifestParsedSuccessfully()) {
+            NSError * __autoreleasing error = wrapper(result->errors().last());
             completionHandler(nil, error);
             return;
         }
@@ -73,10 +79,13 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     // Use an async dispatch in the meantime to prevent clients from expecting synchronous results.
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSError * __autoreleasing error;
-        Ref result = WebKit::WebExtension::create(resourceBaseURL, &error);
+        RefPtr result = WebKit::WebExtension::createWithURL(URL(resourceBaseURL));
 
-        if (error) {
+        if (!result)
+            return;
+
+        if (!result->manifestParsedSuccessfully()) {
+            NSError * __autoreleasing error = wrapper(result->errors().last());
             completionHandler(nil, error);
             return;
         }
@@ -101,16 +110,17 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     if (!(self = [super init]))
         return nil;
 
-    NSError * __autoreleasing internalError;
-    API::Object::constructInWrapper<WebKit::WebExtension>(self, appExtensionBundle, &internalError);
+    Ref result = WebKit::WebExtension::create(appExtensionBundle);
 
-    if (internalError) {
-        if (error)
+    if (!result->manifestParsedSuccessfully()) {
+        if (error) {
+            NSError * __autoreleasing internalError = wrapper(result->errors().last());
             *error = internalError;
+        }
         return nil;
     }
 
-    return self;
+    return result->wrapper();
 }
 
 // FIXME: Remove after Safari has adopted new methods.
@@ -131,16 +141,20 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     if (!(self = [super init]))
         return nil;
 
-    NSError * __autoreleasing internalError;
-    API::Object::constructInWrapper<WebKit::WebExtension>(self, resourceBaseURL, &internalError);
+    RefPtr result = WebKit::WebExtension::createWithURL(URL(resourceBaseURL));
 
-    if (internalError) {
-        if (error)
+    if (!result)
+        return nil;
+
+    if (!result->manifestParsedSuccessfully()) {
+        if (error) {
+            NSError * __autoreleasing internalError = wrapper(result->errors().last());
             *error = internalError;
+        }
         return nil;
     }
 
-    return self;
+    return result->wrapper();
 }
 
 - (instancetype)_initWithManifestDictionary:(NSDictionary<NSString *, id> *)manifest
@@ -157,7 +171,10 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     if (!(self = [super init]))
         return nil;
 
-    API::Object::constructInWrapper<WebKit::WebExtension>(self, manifest, resources);
+    auto jsonManifest = String(WebKit::encodeJSONString(manifest));
+    auto manifestData = JSON::Value::parseJSON(jsonManifest);
+    auto resourcesData = WebKit::toDataMap(resources);
+    API::Object::constructInWrapper<WebKit::WebExtension>(self, *manifestData, resourcesData);
 
     return self;
 }
@@ -169,14 +186,17 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
     if (!(self = [super init]))
         return nil;
 
-    API::Object::constructInWrapper<WebKit::WebExtension>(self, resources);
+    auto resourcesData = WebKit::toDataMap(resources);
+    API::Object::constructInWrapper<WebKit::WebExtension>(self, resourcesData);
 
     return self;
 }
 
 - (NSDictionary<NSString *, id> *)manifest
 {
-    return _webExtension->manifest();
+    NSData *data = wrapper(_webExtension->serializeManifest().get());
+    NSDictionary *dictionary = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+    return dictionary;
 }
 
 - (double)manifestVersion
@@ -226,12 +246,12 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
 
 - (CocoaImage *)iconForSize:(CGSize)size
 {
-    return _webExtension->icon(size);
+    return _webExtension->icon(WebCore::FloatSize(size.width, size.height))->image().get();
 }
 
 - (CocoaImage *)actionIconForSize:(CGSize)size
 {
-    return _webExtension->actionIcon(size);
+    return _webExtension->actionIcon(WebCore::FloatSize(size.width, size.height))->image().get();
 }
 
 - (NSSet<WKWebExtensionPermission> *)requestedPermissions
@@ -261,7 +281,9 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtension, WebExtension, _webExtensio
 
 - (NSArray<NSError *> *)errors
 {
-    return _webExtension->errors();
+    return createNSArray(_webExtension->errors(), [] (auto&& child) -> id {
+        return wrapper(child);
+    }).autorelease();
 }
 
 - (BOOL)hasBackgroundContent

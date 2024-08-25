@@ -30,6 +30,7 @@
 #import "config.h"
 #import "_WKWebExtensionLocalization.h"
 
+#import "APIData.h"
 #import "CocoaHelpers.h"
 #import "Logging.h"
 #import "WKWebExtensionInternal.h"
@@ -240,11 +241,9 @@ using namespace WebKit;
 - (LocalizationDictionary *)_localizationDictionaryForWebExtension:(WebExtension&)webExtension withLocale:(NSString *)localeString
 {
     auto *path = [NSString stringWithFormat:pathToJSONFile, localeString];
-
-    NSError *error;
-    NSData *data = [NSData dataWithData:webExtension.resourceDataForPath(path, &error, WebExtension::CacheResult::No, WebExtension::SuppressNotFoundErrors::Yes)];
+    RefPtr<API::Error> *error;
+    auto data = API::Data::create(webExtension.resourceDataForPath(path, &error, WebExtension::CacheResult::No, WebExtension::SuppressNotFoundErrors::Yes));
     webExtension.recordErrorIfNeeded(error);
-
     return parseJSON(data);
 }
 
