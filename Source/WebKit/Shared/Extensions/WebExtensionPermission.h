@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014 Igalia S.L.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,24 +24,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "Icon.h"
+#pragma once
 
-#if !PLATFORM(GTK) && !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN)
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-namespace WebCore {
+#include <wtf/text/WTFString.h>
 
-Icon::~Icon() = default;
+namespace WebKit {
 
-void Icon::paint(GraphicsContext&, const FloatRect&)
-{
-}
+/* Constants for specifying permission in a WebExtensionContext. */
+class WebExtensionPermission {
+public:
+    static String activeTab();
+    static String alarms();
+    static String clipboardWrite();
+    static String contextMenus();
+    static String cookies();
+    static String declarativeNetRequest();
+    static String declarativeNetRequestFeedback();
+    static String declarativeNetRequestWithHostAccess();
+    static String menus();
+    static String nativeMessaging();
+    static String notifications();
+    static String scripting();
+    static String sidePanel();
+    static String storage();
+    static String tabs();
+    static String unlimitedStorage();
+    static String webNavigation();
+    static String webRequest();
+};
 
-RefPtr<Icon> Icon::createIconForFiles(const Vector<String>&)
-{
-    return nullptr;
-}
+} // namespace WebKit
 
-} // namespace WebCore
-
-#endif // !PLATFORM(GTK) && !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN)
+#endif // ENABLE(WK_WEB_EXTENSIONS)

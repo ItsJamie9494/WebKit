@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Igalia S.L.
+ * Copyright (C) 2024 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,23 +24,40 @@
  */
 
 #include "config.h"
-#include "Icon.h"
+#include "WebExtensionUtilities.h"
 
-#if !PLATFORM(GTK) && !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN)
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-namespace WebCore {
+namespace WebKit {
 
-Icon::~Icon() = default;
-
-void Icon::paint(GraphicsContext&, const FloatRect&)
+Ref<JSON::Array> filterObjects(const JSON::Array& array, WTF::Function<bool(const JSON::Value&)>&& lambda)
 {
+    auto result = JSON::Array::create();
+
+    for (Ref value : array) {
+        if (!value)
+            continue;
+
+        if (lambda(value))
+            result->pushValue(WTFMove(value));
+    }
+
+    return result;
 }
 
-RefPtr<Icon> Icon::createIconForFiles(const Vector<String>&)
+Vector<String> makeStringVector(const JSON::Array& array)
 {
-    return nullptr;
+    Vector<String> vector;
+    int count = array.length();
+    vector.reserveInitialCapacity(count);
+    for (Ref value : array) {
+        if (auto string = value->asString(); !string.isNull())
+            vector.append(WTFMove(string));
+    }
+    vector.shrinkToFit();
+    return vector;
 }
 
-} // namespace WebCore
+} // namespace WebKit
 
-#endif // !PLATFORM(GTK) && !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN)
+#endif // ENABLE(WK_WEB_EXTENSIONS)

@@ -46,10 +46,12 @@
 #include "WebExtensionMatchPattern.h"
 #include "WebExtensionMatchedRuleParameters.h"
 #include "WebExtensionMenuItem.h"
+#include "WebExtensionMessageSenderParameters.h"
 #include "WebExtensionMessagePort.h"
 #include "WebExtensionPortChannelIdentifier.h"
 #include "WebExtensionTab.h"
 #include "WebExtensionTabIdentifier.h"
+#include "WebExtensionStorageAccessLevel.h"
 #include "WebExtensionUtilities.h"
 #include "WebExtensionWindow.h"
 #include "WebExtensionWindowIdentifier.h"
@@ -271,12 +273,14 @@ public:
 
     bool operator==(const WebExtensionContext& other) const { return (this == &other); }
 
+#if PLATFORM(COCOA)
     NSError *createError(Error, NSString *customLocalizedDescription = nil, NSError *underlyingError = nil);
     void recordErrorIfNeeded(NSError *error) { if (error) recordError(error); }
     void recordError(NSError *);
     void clearError(Error);
 
     NSArray *errors();
+#endif
 
     bool storageIsPersistent() const { return !m_storageDirectory.isEmpty(); }
     const String& storageDirectory() const { return m_storageDirectory; }
@@ -488,11 +492,13 @@ public:
 
     bool inTestingMode() const;
 
+#if PLATFORM(COCOA)
     URL backgroundContentURL();
     WKWebView *backgroundWebView() const { return m_backgroundWebView.get(); }
     bool safeToLoadBackgroundContent() const { return m_safeToLoadBackgroundContent; }
 
     NSError *backgroundContentLoadError() const { return m_backgroundContentLoadError.get(); }
+#endif
 
     NSString *backgroundWebViewInspectionName();
     void setBackgroundWebViewInspectionName(const String&);
@@ -592,8 +598,10 @@ private:
     bool removePermissions(PermissionsMap&, PermissionsSet&, WallTime& nextExpirationDate, NSString *notificationName);
     bool removePermissionMatchPatterns(PermissionMatchPatternsMap&, MatchPatternSet&, EqualityOnly, WallTime& nextExpirationDate, NSString *notificationName);
 
+#if PLATFORM(COCOA)
     PermissionsMap& removeExpired(PermissionsMap&, WallTime& nextExpirationDate, NSString *notificationName = nil);
     PermissionMatchPatternsMap& removeExpired(PermissionMatchPatternsMap&, WallTime& nextExpirationDate, NSString *notificationName = nil);
+#endif
 
     void populateWindowsAndTabs();
 
@@ -902,8 +910,10 @@ private:
 
     String m_storageDirectory;
 
+#if PLATFORM(COCOA)
     RetainPtr<NSMutableDictionary> m_state;
     RetainPtr<NSMutableArray> m_errors;
+#endif
 
     RefPtr<WebExtension> m_extension;
     WeakPtr<WebExtensionController> m_extensionController;
@@ -946,9 +956,11 @@ private:
     InstallReason m_installReason { InstallReason::None };
     String m_previousVersion;
 
+#if PLATFORM(COCOA)
     RetainPtr<WKWebView> m_backgroundWebView;
     RetainPtr<NSError> m_backgroundContentLoadError;
     RetainPtr<_WKWebExtensionContextDelegate> m_delegate;
+#endif
 
     String m_backgroundWebViewInspectionName;
 
@@ -965,8 +977,10 @@ private:
     HashMap<Ref<WebExtensionMatchPattern>, UserScriptVector> m_injectedScriptsPerPatternMap;
     HashMap<Ref<WebExtensionMatchPattern>, UserStyleSheetVector> m_injectedStyleSheetsPerPatternMap;
 
+#if PLATFORM(COCOA)
     HashMap<String, Ref<WebExtensionDynamicScripts::WebExtensionRegisteredScript>> m_registeredScriptsMap;
     RetainPtr<_WKWebExtensionRegisteredScriptsSQLiteStore> m_registeredContentScriptsStorage;
+#endif
 
     UserStyleSheetVector m_dynamicallyInjectedUserStyleSheets;
 
@@ -994,15 +1008,19 @@ private:
     PageTabIdentifierMap m_extensionPageTabMap;
     PopupPageActionMap m_popupPageActionMap;
 
+#if PLATFORM(COCOA)
     RetainPtr<NSMapTable> m_tabDelegateToIdentifierMap;
+#endif
 
     CommandsVector m_commands;
     bool m_populatedCommands { false };
 
     String m_declarativeNetRequestContentRuleListFilePath;
     DeclarativeNetRequestMatchedRuleVector m_matchedRules;
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestDynamicRulesStore;
     RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestSessionRulesStore;
+#endif
     HashSet<String> m_enabledStaticRulesetIDs;
     HashSet<double> m_sessionRulesIDs;
     HashSet<double> m_dynamicRulesIDs;
@@ -1011,9 +1029,11 @@ private:
     MenuItemVector m_mainMenuItems;
 
     bool m_isSessionStorageAllowedInContentScripts { false };
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionStorageSQLiteStore> m_localStorageStore;
     RetainPtr<_WKWebExtensionStorageSQLiteStore> m_sessionStorageStore;
     RetainPtr<_WKWebExtensionStorageSQLiteStore> m_syncStorageStore;
+#endif
 };
 
 template<typename T>

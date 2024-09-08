@@ -28,8 +28,10 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "APIObject.h"
-#include "CocoaImage.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/Icon.h>
 #include <wtf/Forward.h>
+#include <wtf/JSONValues.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -86,10 +88,10 @@ public:
 
     void propertiesDidChange();
 
-    CocoaImage *icon(CGSize);
-    void setIcons(NSDictionary *);
+    RefPtr<WebCore::Icon> icon(WebCore::FloatSize);
+    void setIcons(const JSON::Value&);
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    void setIconVariants(NSArray *);
+    void setIconVariants(const JSON::Value&);
 #endif
 
     String label(FallbackWhenEmpty = FallbackWhenEmpty::Yes) const;
@@ -126,8 +128,10 @@ public:
     void setPopupPopoverAppearance(Appearance);
 #endif
 
+#if PLATFORM(COCOA)
     WKWebView *popupWebView();
     bool hasPopupWebView() const { return !!m_popupWebView; }
+#endif
 
     bool presentsPopupWhenReady() const { return m_presentsPopupWhenReady; }
     bool popupPresented() const { return m_popupPresented; }
@@ -165,19 +169,20 @@ private:
     RetainPtr<_WKWebExtensionActionPopover> m_popupPopover;
     Appearance m_popoverAppearance { Appearance::Default };
 #endif
-
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionActionWebView> m_popupWebView;
     RetainPtr<_WKWebExtensionActionWebViewDelegate> m_popupWebViewDelegate;
+#endif
     String m_customPopupPath;
     String m_popupWebViewInspectionName;
 
-    RetainPtr<CocoaImage> m_cachedIcon;
-    RetainPtr<NSSet> m_cachedIconScales;
-    CGSize m_cachedIconIdealSize { CGSizeZero };
-
-    RetainPtr<NSDictionary> m_customIcons;
+    RefPtr<WebCore::Icon> m_cachedIcon;
+    Vector<String> m_cachedIconScales;
+    WebCore::FloatSize m_cachedIconIdealSize { WebCore::FloatSize() }
+    
+    Ref<const JSON::Value> m_customIcons;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    RetainPtr<NSArray> m_customIconVariants;
+    Ref<const JSON::Value> m_customIconVariants;
 #endif
     String m_customLabel;
     String m_customBadgeText;

@@ -42,7 +42,7 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     RegisterURLSchemeAsCachePartitioned(String scheme)
     RegisterURLSchemeAsCanDisplayOnlyIfCanRequest(String scheme)
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     RegisterURLSchemeAsWebExtension(String scheme)
 #endif
 

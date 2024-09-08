@@ -31,6 +31,8 @@
 #import "WebExtensionDynamicScripts.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
+#import "WKNSData.h"
+#import "WKNSError.h"
 #import "APIData.h"
 #import "CocoaHelpers.h"
 #import "WKContentWorld.h"
@@ -82,14 +84,14 @@ Vector<RetainPtr<_WKFrameTreeNode>> getFrames(_WKFrameTreeNode *currentNode, std
 
 std::optional<SourcePair> sourcePairForResource(String path, WebExtensionContext& extensionContext)
 {
-    NSError *error;
-    auto *scriptData = extensionContext.extension().resourceDataForPath(path, &error);
-    if (!scriptData) {
-        extensionContext.recordError(error);
+    RefPtr<API::Error> error;
+    auto scriptData = API::Data::create(extensionContext.extension().resourceDataForPath(path, &error));
+    if (!scriptData->size()) {
+        extensionContext.recordError(wrapper(error));
         return std::nullopt;
     }
 
-    return SourcePair { [[NSString alloc] initWithData:scriptData encoding:NSUTF8StringEncoding], { extensionContext.baseURL(), path } };
+    return SourcePair { [[NSString alloc] initWithData:wrapper(scriptData) encoding:NSUTF8StringEncoding], { extensionContext.baseURL(), path } };
 }
 
 SourcePairs getSourcePairsForParameters(const WebExtensionScriptInjectionParameters& parameters, WebExtensionContext& extensionContext)

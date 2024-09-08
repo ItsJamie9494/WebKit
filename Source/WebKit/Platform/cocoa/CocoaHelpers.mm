@@ -537,4 +537,21 @@ HashSet<String> toImpl(NSSet *set)
     return result;
 }
 
+HashMap<String, std::span<const uint8_t>> toDataMap(NSDictionary *dictionary)
+{
+    NSArray *keys = [dictionary allKeys];
+
+    HashMap<String, std::span<const uint8_t>> result;
+    result.reserveInitialCapacity(dictionary.count);
+
+    for (NSString *key in keys) {
+        id element = [dictionary objectForKey:key];
+
+        if (auto *string = dynamic_objc_cast<NSString>(element))
+            result.add(String(key), String(string).utf8().span());
+    }
+
+    return result;
+}
+
 } // namespace WebKit

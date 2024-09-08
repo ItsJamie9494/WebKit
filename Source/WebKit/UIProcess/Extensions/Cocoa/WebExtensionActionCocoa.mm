@@ -564,18 +564,21 @@ namespace WebKit {
 
 WebExtensionAction::WebExtensionAction(WebExtensionContext& extensionContext)
     : m_extensionContext(extensionContext)
+    , m_customIcons(JSON::Object::create())
 {
 }
 
 WebExtensionAction::WebExtensionAction(WebExtensionContext& extensionContext, WebExtensionTab& tab)
     : m_extensionContext(extensionContext)
     , m_tab(&tab)
+    , m_customIcons(JSON::Object::create())
 {
 }
 
 WebExtensionAction::WebExtensionAction(WebExtensionContext& extensionContext, WebExtensionWindow& window)
     : m_extensionContext(extensionContext)
     , m_window(&window)
+    , m_customIcons(JSON::Object::create())
 {
 }
 
@@ -612,9 +615,9 @@ void WebExtensionAction::clearCustomizations()
 #endif
         return;
 
-    m_customIcons = nil;
+    m_customIcons = JSON::Value::null();
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    m_customIconVariants = nil;
+    m_customIconVariants = JSON::Value::null();
 #endif
     m_customPopupPath = nullString();
     m_customLabel = nullString();
@@ -662,38 +665,38 @@ WebExtensionAction* WebExtensionAction::fallbackAction() const
     return nullptr;
 }
 
-CocoaImage *WebExtensionAction::icon(CGSize idealSize)
+RefPtr<WebCore::Icon> WebExtensionAction::icon(WebCore::FloatSize idealSize)
 {
     if (!extensionContext())
         return nil;
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    if (m_customIconVariants || m_customIcons)
+    if (m_customIconVariants->asObject() || m_customIcons->asObject())
 #else
-    if (m_customIcons)
+    if (m_customIcons->asObject())
 #endif
     {
         // Clear the cache if the display scales change (connecting display, etc.)
         auto *currentScales = availableScreenScales();
-        if (![currentScales isEqualToSet:m_cachedIconScales.get()])
+        if (currentScales == m_cachedIconScales)
             clearIconCache();
 
-        if (m_cachedIcon && CGSizeEqualToSize(idealSize, m_cachedIconIdealSize))
-            return m_cachedIcon.get();
+        if (m_cachedIcon && idealSize == m_cachedIconIdealSize)
+            return m_cachedIcon;
 
-        CocoaImage *result;
+        RefPtr result;
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-        if (m_customIconVariants) {
-            result = extensionContext()->extension().bestImageForIconVariants(m_customIconVariants.get(), idealSize, [&](auto *error) {
-                extensionContext()->recordError(error);
+        if (m_customIconVariants->asObject()->size()) {
+            result = extensionContext()->extension().bestImageForIconVariants(m_customIconVariants.get(), idealSize, [&](RefPtr<API::Error> error) {
+                extensionContext()->recordError(wrapper(error));
             });
         } else
 #endif // ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-        if (m_customIcons) {
-            result = extensionContext()->extension().bestImageInIconsDictionary(m_customIcons.get(), idealSize, [&](auto *error) {
-                extensionContext()->recordError(error);
-            });
+        if (m_customIcons->asObject()->size()) {
+            result = extensionContext()->extension().bestImageInIconsDictionary(m_customIcons.get(), idealSize.width > idealSize.height ? idealSize.width : idealSize.height, [&](RefPtr<API::Error> error) {
+                extensionContext()->recordError(wrapper(error));
+            })
         }
 
         if (result) {
@@ -703,7 +706,7 @@ CocoaImage *WebExtensionAction::icon(CGSize idealSize)
 
             return result;
         }
-
+        
         clearIconCache();
 
         // If custom icons fail, fallback.
@@ -716,16 +719,21 @@ CocoaImage *WebExtensionAction::icon(CGSize idealSize)
     return extensionContext()->extension().actionIcon(idealSize);
 }
 
-void WebExtensionAction::setIcons(NSDictionary *icons)
+void WebExtensionAction::setIcons(const JSON::Value& icons)
 {
-    if ([(m_customIcons ?: @{ }) isEqualToDictionary:(icons ?: @{ })])
-        return;
+    // FIXME: There's no comparaison function for JSONValues yet
+    // if ([(m_customIcons ?: @{ }) isEqualToDictionary:(icons ?: @{ })])
+    //     return;
 
-    m_customIcons = icons.count ? icons : nil;
+    if (auto object = icons.asObject()) {
+        if (object->size()) {
+            m_customIcons = adoptRef(icons);
+        }
+    }
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    m_customIconVariants = nil;
+    m_customIconVariants = JSON::Value::null();
 #endif
-
+    
     clearIconCache();
     propertiesDidChange();
 }
@@ -784,7 +792,7 @@ void WebExtensionAction::setPopupPath(String path)
 NSString *WebExtensionAction::popupWebViewInspectionName()
 {
     if (m_popupWebViewInspectionName.isEmpty())
-        m_popupWebViewInspectionName = WEB_UI_FORMAT_CFSTRING("%@ — Extension Popup Page", "Label for an inspectable Web Extension popup page", (__bridge CFStringRef)extensionContext()->extension().displayShortName());
+        m_popupWebViewInspectionName = WEB_UI_FORMAT_CFSTRING("%@ — Extension Popup Page", "Label for an inspectable Web Extension popup page", extensionContext()->extension().displayShortName().createCFString().get());
 
     return m_popupWebViewInspectionName;
 }
@@ -1113,7 +1121,7 @@ String WebExtensionAction::label(FallbackWhenEmpty fallback) const
         return fallback->label();
 
     // Default
-    if (auto *defaultLabel = extensionContext()->extension().displayActionLabel(); defaultLabel.length || fallback == FallbackWhenEmpty::No)
+    if (auto *defaultLabel = (__bridge NSString *)extensionContext()->extension().displayActionLabel().createCFString().get(); defaultLabel.length || fallback == FallbackWhenEmpty::No)
         return defaultLabel;
 
     return extensionContext()->extension().displayName();
