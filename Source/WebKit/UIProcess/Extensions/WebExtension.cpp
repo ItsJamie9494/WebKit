@@ -38,6 +38,12 @@ static constexpr auto versionManifestKey = "version"_s;
 static constexpr auto versionNameManifestKey = "version_name"_s;
 static constexpr auto descriptionManifestKey = "description"_s;
 
+static constexpr auto commandsManifestKey = "commands"_s;
+static constexpr auto commandsSuggestedKeyManifestKey = "suggested_key"_s;
+static constexpr auto commandsDescriptionKeyManifestKey = "description"_s;
+
+static const size_t maximumNumberOfShortcutCommands = 4;
+
 bool WebExtension::manifestParsedSuccessfully()
 {
     if (m_parsedManifest)
@@ -131,6 +137,226 @@ void WebExtension::populateDisplayStringsIfNeeded()
     m_displayDescription = manifestObject->getString(descriptionManifestKey);
     if (m_displayDescription.isEmpty())
         recordError(createError(Error::InvalidDescription));
+}
+
+const WebExtension::CommandsVector& WebExtension::commands()
+{
+    populateCommandsIfNeeded();
+    return m_commands;
+}
+
+bool WebExtension::hasCommands()
+{
+    populateCommandsIfNeeded();
+    return !m_commands.isEmpty();
+}
+
+using ModifierFlags = WebExtension::ModifierFlags;
+
+static bool parseCommandShortcut(const String& shortcut, OptionSet<ModifierFlags>& modifierFlags, String& key)
+{
+    modifierFlags = { };
+    key = emptyString();
+
+    // An empty shortcut is allowed.
+    if (shortcut.isEmpty())
+        return true;
+
+    static NeverDestroyed<HashMap<String, ModifierFlags>> modifierMap = HashMap<String, ModifierFlags> {
+        { "Ctrl"_s, ModifierFlags::Command },
+        { "Command"_s, ModifierFlags::Command },
+        { "Alt"_s, ModifierFlags::Option },
+        { "MacCtrl"_s, ModifierFlags::Control },
+        { "Shift"_s, ModifierFlags::Shift }
+    };
+
+    static NeverDestroyed<HashMap<String, String>> specialKeyMap = HashMap<String, String> {
+        { "Comma"_s, ","_s },
+        { "Period"_s, "."_s },
+        { "Space"_s, " "_s },
+        { "F1"_s, "\\uF704"_s },
+        { "F2"_s, "\\uF705"_s },
+        { "F3"_s, "\\uF706"_s },
+        { "F4"_s, "\\uF707"_s },
+        { "F5"_s, "\\uF708"_s },
+        { "F6"_s, "\\uF709"_s },
+        { "F7"_s, "\\uF70A"_s },
+        { "F8"_s, "\\uF70B"_s },
+        { "F9"_s, "\\uF70C"_s },
+        { "F10"_s, "\\uF70D"_s },
+        { "F11"_s, "\\uF70E"_s },
+        { "F12"_s, "\\uF70F"_s },
+        { "Insert"_s, "\\uF727"_s },
+        { "Delete"_s, "\\uF728"_s },
+        { "Home"_s, "\\uF729"_s },
+        { "End"_s, "\\uF72B"_s },
+        { "PageUp"_s, "\\uF72C"_s },
+        { "PageDown"_s, "\\uF72D"_s },
+        { "Up"_s, "\\uF700"_s },
+        { "Down"_s, "\\uF701"_s },
+        { "Left"_s, "\\uF702"_s },
+        { "Right"_s, "\\uF703"_s }
+    };
+
+    auto parts = shortcut.split('+');
+
+    // Reject shortcuts with fewer than two or more than three components.
+    if (parts.size() < 2 || parts.size() > 3)
+        return false;
+
+    key = parts.takeLast();
+
+    // Keys should not be present in the modifier map.
+    if (modifierMap.get().contains(key))
+        return false;
+
+    if (key.length() == 1) {
+        // Single-character keys must be alphanumeric.
+        if (!isASCIIAlphanumeric(key[0]))
+            return false;
+
+        key = key.convertToASCIILowercase();
+    } else {
+        auto entry = specialKeyMap.get().find(key);
+
+        // Non-alphanumeric keys must be in the special key map.
+        if (entry == specialKeyMap.get().end())
+            return false;
+
+        key = entry->value;
+    }
+
+    for (auto& part : parts) {
+        // Modifiers must exist in the modifier map.
+        if (!modifierMap.get().contains(part))
+            return false;
+
+        modifierFlags.add(modifierMap.get().get(part));
+    }
+
+    // At least one valid modifier is required.
+    if (!modifierFlags)
+        return false;
+
+    return true;
+}
+
+void WebExtension::populateCommandsIfNeeded()
+{
+    if (m_parsedManifestCommands)
+        return;
+
+    m_parsedManifestCommands = true;
+
+    RefPtr manifestObject = this->manifestObject();
+    if (!manifestObject)
+        return;
+
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/commands
+
+    auto commandsObject = manifestObject->getObject(commandsManifestKey);
+    if (!commandsObject) {
+        recordError(createError(Error::InvalidCommands));
+        return;
+    }
+
+    size_t commandsWithShortcuts = 0;
+    std::optional<String> error;
+
+    bool hasActionCommand = false;
+
+    for (auto commandIdentifier : commandsObject->keys()) {
+        if (commandIdentifier.isEmpty()) {
+            error = WEB_UI_STRING("Empty or invalid identifier in the `commands` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for invalid command identifier");
+            continue;
+        }
+
+        auto commandDictionary = commandsObject->getObject(commandIdentifier);
+        if (!commandDictionary->size()) {
+            error = WEB_UI_STRING("Empty or invalid command in the `commands` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for invalid command");
+            continue;
+        }
+
+        CommandData commandData;
+        commandData.identifier = commandIdentifier;
+        commandData.activationKey = emptyString();
+        commandData.modifierFlags = { };
+
+        bool isActionCommand = false;
+        if (supportsManifestVersion(3) && commandData.identifier == "_execute_action"_s)
+            isActionCommand = true;
+        else if (!supportsManifestVersion(3) && (commandData.identifier == "_execute_browser_action"_s || commandData.identifier == "_execute_page_action"_s))
+            isActionCommand = true;
+
+        if (isActionCommand && !hasActionCommand)
+            hasActionCommand = true;
+
+        // Descriptions are required for standard commands, but are optional for action commands.
+        auto description = commandDictionary->getString(commandsDescriptionKeyManifestKey);
+        if (description.isEmpty() && !isActionCommand) {
+            error = WEB_UI_STRING("Empty or invalid `description` in the `commands` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for invalid command description");
+            continue;
+        }
+
+        if (isActionCommand && !description.isEmpty()) {
+            description = displayActionLabel();
+            if (!description.isEmpty())
+                description = displayShortName();
+        }
+
+        commandData.description = description;
+
+        if (auto suggestedKeyDictionary = commandDictionary->getObject(commandsSuggestedKeyManifestKey)) {
+#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
+            const auto macPlatform = "mac"_s;
+            const auto iosPlatform = "ios"_s;
+#elif PLATFORM(GTK)
+            const auto linuxPlatform = "linux"_s;
+#endif
+            const auto defaultPlatform = "default"_s;
+
+#if PLATFORM(MAC)
+            auto platformShortcut = !suggestedKeyDictionary->getString(macPlatform).isEmpty() ? suggestedKeyDictionary->getString(macPlatform) : suggestedKeyDictionary->getString(iosPlatform);
+#elif PLATFORM(IOS_FAMILY)
+            auto platformShortcut = !suggestedKeyDictionary->getString(iosPlatform).isEmpty() ? suggestedKeyDictionary->getString(iosPlatform) : suggestedKeyDictionary->getString(macPlatform);
+#elif PLATFORM(GTK)
+            auto platformShortcut = suggestedKeyDictionary->getString(linuxPlatform);
+#else
+            auto platformShortcut = suggestedKeyDictionary->getString(defaultPlatform);
+#endif
+            if (platformShortcut.isEmpty())
+                platformShortcut = suggestedKeyDictionary->getString(defaultPlatform);
+
+            if (!parseCommandShortcut(platformShortcut, commandData.modifierFlags, commandData.activationKey)) {
+                error = WEB_UI_STRING("Invalid `suggested_key` in the `commands` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for invalid command shortcut");
+                continue;
+            }
+
+            if (!commandData.activationKey.isEmpty() && ++commandsWithShortcuts > maximumNumberOfShortcutCommands) {
+                error = WEB_UI_STRING("Too many shortcuts specified for `commands`, only 4 shortcuts are allowed.", "WKWebExtensionErrorInvalidManifestEntry description for too many command shortcuts");
+                commandData.activationKey = emptyString();
+                commandData.modifierFlags = { };
+            }
+        }
+
+        m_commands.append(WTFMove(commandData));
+    }
+
+    if (!hasActionCommand) {
+        String commandIdentifier;
+        if (hasAction())
+            commandIdentifier = "_execute_action"_s;
+        else if (hasBrowserAction())
+            commandIdentifier = "_execute_browser_action"_s;
+        else if (hasPageAction())
+            commandIdentifier = "_execute_page_action"_s;
+
+        if (!commandIdentifier.isEmpty())
+            m_commands.append({ commandIdentifier, displayActionLabel(), emptyString(), { } });
+    }
+
+    if (error)
+        recordError(createError(Error::InvalidCommands, *error));
 }
 
 } // namespace WebKit
