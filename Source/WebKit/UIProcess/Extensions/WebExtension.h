@@ -69,6 +69,8 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
     WTF_MAKE_NONCOPYABLE(WebExtension);
 
 public:
+    using Resources = HashMap<String, std::span<const uint8_t>>;
+
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
     {
@@ -76,8 +78,8 @@ public:
     }
 
     explicit WebExtension(NSBundle *appExtensionBundle, NSURL *resourceBaseURL, RefPtr<API::Error>&);
-    explicit WebExtension(NSDictionary *manifest, NSDictionary *resources);
-    explicit WebExtension(NSDictionary *resources);
+    explicit WebExtension(NSDictionary *manifest, const Resources& = { });
+    explicit WebExtension(const Resources& = { });
 
     ~WebExtension() { }
 
@@ -229,8 +231,8 @@ public:
 
     UTType *resourceTypeForPath(NSString *);
 
-    NSString *resourceStringForPath(NSString *, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
-    NSData *resourceDataForPath(NSString *, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
+    String resourceStringForPath(const String&, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
+    std::span<const uint8_t> resourceDataForPath(const String&, RefPtr<API::Error>&, CacheResult = CacheResult::No, SuppressNotFoundErrors = SuppressNotFoundErrors::No);
 
     _WKWebExtensionLocalization *localization();
     NSLocale *defaultLocale();
@@ -361,7 +363,7 @@ private:
     void populateSidePanelProperties(RetainPtr<NSDictionary>);
 #endif
 
-    NSURL *resourceFileURLForPath(NSString *);
+    URL resourceFileURLForPath(const String&);
 
     std::optional<WebExtension::DeclarativeNetRequestRulesetData> parseDeclarativeNetRequestRulesetDictionary(NSDictionary *, RefPtr<API::Error>&);
 
@@ -380,10 +382,10 @@ private:
 
     RetainPtr<NSBundle> m_bundle;
     mutable RetainPtr<SecStaticCodeRef> m_bundleStaticCode;
-    RetainPtr<NSURL> m_resourceBaseURL;
+    URL m_resourceBaseURL;
     RetainPtr<NSDictionary> m_manifest;
     Ref<const JSON::Value> m_manifestJSON;
-    RetainPtr<NSMutableDictionary> m_resources;
+    Resources m_resources;
 
     RetainPtr<NSLocale> m_defaultLocale;
     RetainPtr<_WKWebExtensionLocalization> m_localization;

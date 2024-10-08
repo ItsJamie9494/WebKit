@@ -29,6 +29,8 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "WebExtensionUtilities.h"
+#include <WebCore/CommonAtomStrings.h>
+#include <WebCore/TextResourceDecoder.h>
 
 namespace WebKit {
 
@@ -243,6 +245,68 @@ void WebExtension::populateWebAccessibleResourcesIfNeeded()
         parseWebAccessibleResourcesVersion3();
     else
         parseWebAccessibleResourcesVersion2();
+}
+
+// FIXME: Write tests for this function to make sure path escapes are properly caught ()
+#if !PLATFORM(COCOA)
+URL WebExtension::resourceFileURLForPath(const String& originalPath)
+{
+    ASSERT(originalPath);
+
+    String path = originalPath;
+
+    if (path.startsWith('/'))
+        path = path.substring(1);
+
+    if (!path.length() || m_resourceBaseURL.isNull())
+        return { };
+
+    // FIXME: Validate that this expands "../" and related.
+    auto resourceURL = URL(m_resourceBaseURL, path).fileSystemPath();
+
+    // Don't allow escaping the base URL with "../".
+    if (!resourceURL.startsWith(m_resourceBaseURL.string())) {
+        RELEASE_LOG_ERROR(Extensions, "Resource URL path escape attempt: %s", resourceURL.utf8().data());
+        return { };
+    }
+
+    return URL::fileURLWithFileSystemPath(resourceURL);
+}
+#endif
+
+String WebExtension::resourceStringForPath(const String& originalPath, RefPtr<API::Error>& outError, CacheResult cacheResult, SuppressNotFoundErrors suppressErrors)
+{
+    ASSERT(originalPath);
+
+    String path = originalPath;
+
+    // Remove leading slash to normalize the path for lookup/storage in the cache dictionary.
+    if (path.startsWith('/'))
+        path = path.substring(1);
+
+    if (auto cachedData = m_resources.getOptional(path)) {
+        if (auto cachedString = String::fromUTF8(*cachedData); !cachedString.isEmpty())
+            return cachedString;
+    }
+
+    if ((path == generatedBackgroundPageFilename) || (path == generatedBackgroundServiceWorkerFilename))
+        return generatedBackgroundContent();
+
+    auto data = resourceDataForPath(path, outError, CacheResult::No, suppressErrors);
+    auto resourceString = emptyString();
+    if (!data.empty()) {
+        auto decoder = TextResourceDecoder::create("text/plain"_s); // FIXME: Investigate This
+
+        resourceString = decoder->decode(data);
+    }
+
+    if (!resourceString)
+        return { };
+
+    if (cacheResult == CacheResult::Yes)
+        m_resources.set(path, resourceString.utf8().span());
+
+    return resourceString;
 }
 
 static int toAPI(WebExtension::Error error)
