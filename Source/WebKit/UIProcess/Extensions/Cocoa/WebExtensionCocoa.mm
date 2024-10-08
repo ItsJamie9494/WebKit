@@ -420,7 +420,7 @@ URL WebExtension::resourceFileURLForPath(const String& originalPath)
     if (!path.length() || m_resourceBaseURL.isNull())
         return { };
 
-    NSURL *resourceURL = [NSURL fileURLWithPath:path.stringByRemovingPercentEncoding isDirectory:NO relativeToURL:m_resourceBaseURL].URLByStandardizingPath;
+    NSURL *resourceURL = [NSURL fileURLWithPath:static_cast<NSString *>(path).stringByRemovingPercentEncoding isDirectory:NO relativeToURL:m_resourceBaseURL].URLByStandardizingPath;
 
     // Don't allow escaping the base URL with "../".
     if (![resourceURL.absoluteString hasPrefix:m_resourceBaseURL.string()]) {
