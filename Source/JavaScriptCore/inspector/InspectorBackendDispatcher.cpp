@@ -352,7 +352,9 @@ RefPtr<JSON::Object> BackendDispatcher::getObject(JSON::Object* params, const St
 
 RefPtr<JSON::Array> BackendDispatcher::getArray(JSON::Object* params, const String& name, bool required)
 {
-    return getPropertyValue<RefPtr<JSON::Array>>(params, name, required, &JSON::Value::asArray, "Array"_s);
+    return getPropertyValue<RefPtr<JSON::Array>>(params, name, required, [](JSON::Value& value) {
+        return value.asArray();
+    }, "Array"_s);
 }
 
 } // namespace Inspector

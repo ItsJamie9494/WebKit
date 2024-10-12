@@ -32,6 +32,8 @@
 #include "CocoaImage.h"
 #include "WebExtensionContentWorldType.h"
 #include "WebExtensionMatchPattern.h"
+#include <WebCore/Icon.h>
+#include <WebCore/FloatSize.h>
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -65,6 +67,8 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
 
 public:
     using Resources = HashMap<String, Ref<API::Data>>;
+    using IconsCacheVariant = std::variant<RefPtr<WebCore::Icon>, Vector<double>>;
+    using IconsCache = HashMap<String, IconsCacheVariant>;
 
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
@@ -240,9 +244,9 @@ public:
 
     const String& contentSecurityPolicy();
 
-    CocoaImage *icon(CGSize idealSize);
+    RefPtr<WebCore::Icon> icon(WebCore::FloatSize idealSize);
 
-    CocoaImage *actionIcon(CGSize idealSize);
+    RefPtr<WebCore::Icon> actionIcon(WebCore::FloatSize idealSize);
     NSString *displayActionLabel();
     NSString *actionPopupPath();
 
@@ -259,18 +263,18 @@ public:
     const String& sidebarTitle();
 #endif
 
-    CocoaImage *imageForPath(NSString *, RefPtr<API::Error>&, CGSize sizeForResizing = CGSizeZero);
+    RefPtr<WebCore::Icon> imageForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { });
 
-    size_t bestSizeInIconsDictionary(NSDictionary *, size_t idealPixelSize);
-    NSString *pathForBestImageInIconsDictionary(NSDictionary *, size_t idealPixelSize);
+    size_t bestSizeInIconsDictionary(const JSON::Object&, size_t idealPixelSize);
+    String pathForBestImageInIconsDictionary(const JSON::Object&, size_t idealPixelSize);
 
-    CocoaImage *bestImageInIconsDictionary(NSDictionary *, CGSize idealSize, const Function<void(Ref<API::Error>)>&);
-    CocoaImage *bestImageForIconsDictionaryManifestKey(NSDictionary *, NSString *manifestKey, CGSize idealSize, RetainPtr<NSMutableDictionary>& cacheLocation, Error, NSString *customLocalizedDescription);
+    RefPtr<WebCore::Icon> bestImageInIconsDictionary(const JSON::Object&, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestImageForIconsDictionaryManifestKey(const JSON::Object&, String manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    NSDictionary *iconsDictionaryForBestIconVariant(NSArray *, size_t idealPixelSize, ColorScheme);
-    CocoaImage *bestImageForIconVariants(NSArray *, CGSize idealSize, const Function<void(Ref<API::Error>)>&);
-    CocoaImage *bestImageForIconVariantsManifestKey(NSDictionary *, NSString *manifestKey, CGSize idealSize, RetainPtr<NSMutableDictionary>& cacheLocation, Error, NSString *customLocalizedDescription);
+    RefPtr<JSON::Object> iconsDictionaryForBestIconVariant(const JSON::Array&, size_t idealPixelSize, ColorScheme);
+    RefPtr<WebCore::Icon> bestImageForIconVariants(const JSON::Array& variants, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestImageForIconVariantsManifestKey(const JSON::Value&, String manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 #endif
 
     bool hasBackgroundContent();
@@ -393,16 +397,16 @@ private:
     String m_displayDescription;
     String m_version;
 
-    RetainPtr<NSMutableDictionary> m_iconsCache;
+    IconsCache m_iconsCache;
 
     RetainPtr<NSDictionary> m_actionDictionary;
-    RetainPtr<NSMutableDictionary> m_actionIconsCache;
-    RetainPtr<CocoaImage> m_defaultActionIcon;
+    IconsCache m_actionIconsCache;
+    RefPtr<WebCore::Icon> m_defaultActionIcon;
     RetainPtr<NSString> m_displayActionLabel;
     RetainPtr<NSString> m_actionPopupPath;
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
-    HashMap<String, Ref<WebCore::Icon>> m_sidebarIconsCache;
+    IconsCache m_sidebarIconsCache;
     String m_sidebarDocumentPath;
     String m_sidebarTitle;
 #endif

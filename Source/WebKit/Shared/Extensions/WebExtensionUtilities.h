@@ -48,6 +48,9 @@ Ref<JSON::Array> filterObjects(const JSON::Array&, WTF::Function<bool(const JSON
 
 Vector<String> makeStringVector(const JSON::Array&);
 
+Vector<double> availableScreenScales(); // FIXME: In the future, write a version for Gtk (GdkMonitor)
+double largestDisplayScale();
+
 #ifdef __OBJC__
 
 /// Verifies that a dictionary:

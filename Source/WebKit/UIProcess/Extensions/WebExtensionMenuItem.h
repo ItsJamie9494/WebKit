@@ -135,13 +135,13 @@ private:
 
     RefPtr<WebExtensionCommand> m_command;
 
-    mutable RetainPtr<CocoaImage> m_cachedIcon;
-    mutable RetainPtr<NSSet> m_cachedIconScales;
+    mutable RefPtr<WebCore::Icon> m_cachedIcon;
+    mutable Vector<double> m_cachedIconScales;
     mutable CGSize m_cachedIconIdealSize { CGSizeZero };
 
-    RetainPtr<NSDictionary> m_icons;
+    RefPtr<const JSON::Value> m_icons;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    RetainPtr<NSArray> m_iconVariants;
+    RefPtr<const JSON::Value> m_iconVariants;
 #endif
 
     bool m_checked : 1 { false };

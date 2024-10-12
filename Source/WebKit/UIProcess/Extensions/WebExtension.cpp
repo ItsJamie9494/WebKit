@@ -31,12 +31,21 @@
 #include "WebExtensionPermission.h"
 #include "WebExtensionUtilities.h"
 #include <WebCore/TextResourceDecoder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebKit {
 
+static constexpr auto iconsManifestKey = "icons"_s;
+
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
 static constexpr auto iconVariantsManifestKey = "icon_variants"_s;
+static constexpr auto colorSchemesManifestKey = "color_schemes"_s;
+static constexpr auto lightManifestKey = "light"_s;
+static constexpr auto darkManifestKey = "dark"_s;
+static constexpr auto anyManifestKey = "any"_s;
 #endif
+
+static constexpr auto defaultIconManifestKey = "default_icon"_s;
 
 static constexpr auto actionManifestKey = "action"_s;
 static constexpr auto browserActionManifestKey = "browser_action"_s;
@@ -1450,6 +1459,287 @@ void WebExtension::populatePermissionsPropertiesIfNeeded()
         }
     }
 }
+
+RefPtr<WebCore::Icon> WebExtension::icon(WebCore::FloatSize size)
+{
+    RefPtr manifestObject = this->manifestObject();
+    if (!manifestObject)
+        return nullptr;
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    if (manifestObject->asObject()->getValue(iconVariantsManifestKey)) {
+        String localizedErrorDescription = WEB_UI_STRING("Failed to load images in `icon_variants` manifest entry.", "WKWebExtensionErrorInvalidIcon description for failing to load image variants");
+        return bestImageForIconVariantsManifestKey(*manifestObject.get(), iconsManifestKey, size, m_iconsCache, Error::InvalidIcon, localizedErrorDescription);
+    }
+#endif
+    
+    String localizedErrorDescription = WEB_UI_STRING("Failed to load images in `icons` manifest entry.", "WKWebExtensionErrorInvalidIcon description for failing to load images");
+    return bestImageForIconsDictionaryManifestKey(*manifestObject.get(), iconsManifestKey, size, m_iconsCache, Error::InvalidIcon, localizedErrorDescription);
+}
+
+RefPtr<WebCore::Icon> WebExtension::actionIcon(WebCore::FloatSize size)
+{
+    RefPtr manifestObject = this->manifestObject();
+    if (!manifestObject)
+        return nullptr;
+
+    populateActionPropertiesIfNeeded();
+
+    if (m_defaultActionIcon)
+        return m_defaultActionIcon;
+    
+    RefPtr<JSON::Value> actionManifest;
+    if (supportsManifestVersion(3))
+        actionManifest = manifestObject->getValue(actionManifestKey);
+    else {
+        actionManifest = manifestObject->getValue(browserActionManifestKey);
+        if (!actionManifest)
+            actionManifest = manifestObject->getValue(pageActionManifestKey);
+    }
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    if (auto actionObject = actionManifest->asObject(); actionObject->getValue(iconVariantsManifestKey)) {
+        String localizedErrorDescription = WEB_UI_STRING("Failed to load images in `icon_variants` for the `action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load image variants for action");
+        if (auto result = bestImageForIconVariantsManifestKey(*manifestObject.get(), iconVariantsManifestKey, size, m_actionIconsCache, Error::InvalidActionIcon, localizedErrorDescription))
+            return result;
+        return icon(size);
+    }
+#endif
+
+    String localizedErrorDescription;
+    if (supportsManifestVersion(3))
+        localizedErrorDescription = WEB_UI_STRING("Failed to load images in `default_icon` for the `action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load images for action only");
+    else
+        localizedErrorDescription = WEB_UI_STRING("Failed to load images in `default_icon` for the `browser_action` or `page_action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load images for browser_action or page_action");
+
+    if (auto result = bestImageForIconsDictionaryManifestKey(*actionManifest->asObject().get(), defaultIconManifestKey, size, m_actionIconsCache, Error::InvalidActionIcon, localizedErrorDescription))
+        return result;
+    return icon(size);
+}
+
+String WebExtension::pathForBestImageInIconsDictionary(const JSON::Object& iconsObject, size_t idealPixelSize)
+{
+    size_t bestSize = bestSizeInIconsDictionary(iconsObject, idealPixelSize);
+    if (!bestSize)
+        return nullString();
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    if (bestSize == std::numeric_limits<size_t>::max())
+        return iconsObject.getString(anyManifestKey);
+#endif
+
+    return iconsObject.getString(String::number(bestSize));
+}
+
+size_t WebExtension::bestSizeInIconsDictionary(const JSON::Object& iconsObject, size_t idealPixelSize)
+{
+    if (!iconsObject.size())
+        return 0;
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+    // Check if the "any" size exists (typically a vector image), and prefer it.
+    if (iconsObject.getValue(anyManifestKey)) {
+        // Return max to ensure it takes precedence over all other sizes.
+        return std::numeric_limits<size_t>::max();
+    }
+#endif
+
+    // Check if the ideal size exists, if so return it.
+    if (iconsObject.getValue(String::number(idealPixelSize)))
+        return idealPixelSize;
+
+    // Sort the remaining keys and find the next largest size.
+    Vector<String> sizeKeys = { };
+    for (auto key : iconsObject.keys()) {
+        // Filter the values to only include numeric strings representing sizes. This will exclude non-numeric string
+        // values such as "any", "color_schemes", and any other strings that cannot be converted to a positive integer.
+        auto integer = parseInteger<size_t>(key);
+        if (integer && integer > 0)
+            sizeKeys.append(key);
+    }
+
+    if (!sizeKeys.size())
+        return 0;
+
+    // std::sort(sizeKeys->begin(), sizeKeys->end(), [](Ref<JSON::Value> a, Ref<JSON::Value> b) {
+    //     return a->asInteger().value_or(0) > b->asInteger().value_or(0);
+    // });
+
+    size_t bestSize = 0;
+    for (auto size : sizeKeys) {
+        if (auto sizeInteger = parseInteger<size_t>(size)) {
+            bestSize = *sizeInteger;
+            if (bestSize >= idealPixelSize)
+                break;
+        }
+    }
+
+    ASSERT(bestSize);
+    return bestSize;
+}
+
+RefPtr<WebCore::Icon> WebExtension::bestImageForIconsDictionaryManifestKey(const JSON::Object& iconsObject, String manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error error, const String& customLocalizedDescription)
+{
+    // Clear the cache if the display scales change (connecting display, etc.)
+    auto currentScales = availableScreenScales();
+    if (auto cachedResult = cacheLocation.get("scales"_s); std::holds_alternative<Vector<double>>(cachedResult)) {
+        auto cachedScales = std::get<Vector<double>>(cacheLocation.get("scales"_s));
+        if (!cacheLocation.isEmpty() || currentScales != cachedScales) {
+            cacheLocation = IconsCache();
+            cacheLocation.set("scales"_s, currentScales);
+        }
+    }
+
+    auto cacheKey = idealSize.toJSONString();
+    if (auto cachedResult = cacheLocation.get(cacheKey); std::holds_alternative<RefPtr<WebCore::Icon>>(cachedResult))
+        return std::get<RefPtr<WebCore::Icon>>(cachedResult);
+
+    auto iconObject = iconsObject.getObject(manifestKey);
+    if (!iconObject)
+        return nullptr;
+
+    auto result = bestImageInIconsDictionary(*iconObject, idealSize, [&](Ref<API::Error> error) {
+        recordError(error);
+    });
+
+    if (!result) {
+        if (iconObject->size()) {
+            // Record an error if the dictionary had values, meaning the likely failure is the images were missing on disk or bad format.
+            recordError(createError(error, customLocalizedDescription));
+        } else if (auto object = iconsObject.getValue(manifestKey)) {
+            // Record an error if the key had dictionary that was empty, or the key had a value of the wrong type.
+            if (!iconObject->size() || object->type() != JSON::Value::Type::Object)
+                recordError(createError(error));
+        }
+
+        return nullptr;
+    }
+
+    cacheLocation.set(cacheKey, IconsCacheVariant(result));
+    return result;
+}
+
+#if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
+static OptionSet<WebExtension::ColorScheme> toColorSchemes(RefPtr<JSON::Value> value)
+{
+    using ColorScheme = WebExtension::ColorScheme;
+
+    if (!value) {
+        // A nil value counts as all color schemes.
+        return { ColorScheme::Light, ColorScheme::Dark };
+    }
+
+    OptionSet<ColorScheme> result;
+
+    auto array = value->asArray();
+
+    if (!array)
+        return { ColorScheme::Light, ColorScheme::Dark };
+
+    for (auto i : *array) {
+        if (i->asString() == lightManifestKey)
+            result.add(ColorScheme::Light);
+        else if (i->asString() == darkManifestKey)
+            result.add(ColorScheme::Dark);
+    }
+
+    return result;
+}
+
+RefPtr<JSON::Object> WebExtension::iconsDictionaryForBestIconVariant(const JSON::Array& variants, size_t idealPixelSize, ColorScheme idealColorScheme)
+{
+    if (variants.length() == 1)
+        return variants.get(0)->asObject();
+
+    RefPtr<JSON::Object> bestVariant = nullptr;
+    RefPtr<JSON::Object> fallbackVariant = nullptr;
+    bool foundIdealFallbackVariant = false;
+
+    size_t bestSize = 0;
+    size_t fallbackSize = 0;
+
+    // Pick the first variant matching color scheme and/or size.
+    for (auto variant : variants) {
+        auto colorSchemes = toColorSchemes(variant->asObject()->getArray(colorSchemesManifestKey)->asValue()); // FIXME do some error checking here, there's at least 3 points of failure
+        auto currentBestSize = bestSizeInIconsDictionary(*variant->asObject().get(), idealPixelSize);
+
+        if (colorSchemes.contains(idealColorScheme)) {
+            if (currentBestSize >= idealPixelSize) {
+                // Found the best variant, return it.
+                return variant->asObject();
+            }
+
+            if (currentBestSize > bestSize) {
+                // Found a larger ideal variant.
+                bestSize = currentBestSize;
+                bestVariant = variant->asObject();
+            }
+        } else if (!foundIdealFallbackVariant && currentBestSize >= idealPixelSize) {
+            // Found an ideal fallback variant, based only on size.
+            fallbackSize = currentBestSize;
+            fallbackVariant = variant->asObject();
+            foundIdealFallbackVariant = true;
+        } else if (!foundIdealFallbackVariant && currentBestSize > fallbackSize) {
+            // Found a smaller fallback variant.
+            fallbackSize = currentBestSize;
+            fallbackVariant = variant->asObject();
+        }
+    }
+
+    if (!!bestVariant)
+        return bestVariant;
+
+    return fallbackVariant;
+}
+
+RefPtr<WebCore::Icon> WebExtension::bestImageForIconVariantsManifestKey(const JSON::Value& value, String manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error error, const String& customLocalizedDescription)
+{
+    // Clear the cache if the display scales change (connecting display, etc.)
+    auto currentScales = availableScreenScales();
+    if (auto cachedResult = cacheLocation.get("scales"_s); std::holds_alternative<Vector<double>>(cachedResult)) {
+        auto cachedScales = std::get<Vector<double>>(cacheLocation.get("scales"_s));
+        if (!cacheLocation.isEmpty() || currentScales != cachedScales) {
+            cacheLocation = IconsCache();
+            cacheLocation.set("scales"_s, currentScales);
+        }
+    }
+
+    auto cacheKey = idealSize.toJSONString();
+    if (auto cachedResult = cacheLocation.get(cacheKey); std::holds_alternative<RefPtr<WebCore::Icon>>(cachedResult))
+        return std::get<RefPtr<WebCore::Icon>>(cachedResult);
+
+    if (auto iconDictionaryObject = value.asObject()) {
+        auto iconDictionary = iconDictionaryObject->getObject(manifestKey);
+        if (!iconDictionary)
+            return nullptr;
+        
+        if (!iconDictionary->asArray())
+            return nullptr;
+
+        auto result = bestImageForIconVariants(*iconDictionary->asArray(), idealSize, [&](Ref<API::Error> error) {
+            recordError(error);
+        });
+
+        if (!result) {
+            if (iconDictionary->size()) {
+                // Record an error if the dictionary had values, meaning the likely failure is the images were missing on disk or bad format.
+                recordError(createError(error, customLocalizedDescription));
+            } else if (auto object = iconDictionaryObject->getValue(manifestKey)) {
+                // Record an error if the key had dictionary that was empty, or the key had a value of the wrong type.
+                if (!iconDictionary->size() || object->type() != JSON::Value::Type::Object)
+                    recordError(createError(error));
+            }
+
+            return nullptr;
+        }
+
+        cacheLocation.set(cacheKey, IconsCacheVariant(result));
+        return result;
+    }
+
+    return nullptr;
+}
+#endif
 
 } // namespace WebKit
 

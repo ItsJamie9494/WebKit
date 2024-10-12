@@ -105,6 +105,7 @@ public:
     RefPtr<Object> asObject();
     RefPtr<const Object> asObject() const;
     RefPtr<Array> asArray();
+    RefPtr<const Array> asArray() const;
 
     static RefPtr<Value> parseJSON(StringView);
 
@@ -211,6 +212,8 @@ protected:
     const_iterator begin() const { return m_map.begin(); }
     const_iterator end() const { return m_map.end(); }
 
+    DataStorage::KeysConstIteratorRange keys() const { return m_map.keys(); }
+
     unsigned size() const { return m_map.size(); }
 
     // FIXME: <http://webkit.org/b/179847> remove these functions when legacy InspectorObject symbols are no longer needed.
@@ -257,6 +260,8 @@ public:
 
     using ObjectBase::begin;
     using ObjectBase::end;
+
+    using ObjectBase::keys;
 
     using ObjectBase::size;
 };
@@ -528,6 +533,24 @@ inline RefPtr<Array> Value::asArray()
     case Type::Array:
         static_assert(sizeof(ArrayBase) == sizeof(Array));
         return static_cast<Array*>(this);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+inline RefPtr<const Array> Value::asArray() const
+{
+    switch (m_type) {
+    case Type::Null:
+    case Type::Boolean:
+    case Type::Double:
+    case Type::Integer:
+    case Type::String:
+    case Type::Object:
+        return nullptr;
+    case Type::Array:
+        static_assert(sizeof(ArrayBase) == sizeof(Array));
+        return static_cast<const Array*>(this);
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;

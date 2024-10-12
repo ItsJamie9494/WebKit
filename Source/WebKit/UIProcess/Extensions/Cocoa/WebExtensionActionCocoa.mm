@@ -614,9 +614,9 @@ void WebExtensionAction::clearCustomizations()
 #endif
         return;
 
-    m_customIcons = nil;
+    m_customIcons = nullptr;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    m_customIconVariants = nil;
+    m_customIconVariants = nullptr;
 #endif
     m_customPopupPath = nullString();
     m_customLabel = nullString();
@@ -726,24 +726,24 @@ CocoaImage *WebExtensionAction::icon(CGSize idealSize)
 #endif
     {
         // Clear the cache if the display scales change (connecting display, etc.)
-        auto *currentScales = availableScreenScales();
-        if (![currentScales isEqualToSet:m_cachedIconScales.get()])
+        auto currentScales = availableScreenScales();
+        if (currentScales != m_cachedIconScales)
             clearIconCache();
 
         if (m_cachedIcon && CGSizeEqualToSize(idealSize, m_cachedIconIdealSize))
-            return m_cachedIcon.get();
+            return m_cachedIcon->image().get();
 
-        CocoaImage *result;
+        RefPtr<WebCore::Icon> result;
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
         if (m_customIconVariants) {
-            result = extensionContext()->extension().bestImageForIconVariants(m_customIconVariants.get(), idealSize, [&](Ref<API::Error> error) {
+            result = extensionContext()->extension().bestImageForIconVariants(*m_customIconVariants->asArray().get(), WebCore::FloatSize(idealSize), [&](Ref<API::Error> error) {
                 extensionContext()->recordError(::WebKit::wrapper(error));
             });
         } else
 #endif // ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
         if (m_customIcons) {
-            result = extensionContext()->extension().bestImageInIconsDictionary(m_customIcons.get(), idealSize, [&](Ref<API::Error> error) {
+            result = extensionContext()->extension().bestImageInIconsDictionary(*(m_customIcons->asObject()), WebCore::FloatSize(idealSize), [&](Ref<API::Error> error) {
                 extensionContext()->recordError(::WebKit::wrapper(error));
             });
         }
@@ -753,7 +753,7 @@ CocoaImage *WebExtensionAction::icon(CGSize idealSize)
             m_cachedIconScales = currentScales;
             m_cachedIconIdealSize = idealSize;
 
-            return result;
+            return result->image().get();
         }
 
         clearIconCache();
@@ -765,31 +765,37 @@ CocoaImage *WebExtensionAction::icon(CGSize idealSize)
         return fallback->icon(idealSize);
 
     // Default
-    return extensionContext()->extension().actionIcon(idealSize);
+    if (auto image = extensionContext()->extension().actionIcon(WebCore::FloatSize(idealSize)))
+        return image->image().get();
+    return nil;
 }
 
-void WebExtensionAction::setIcons(NSDictionary *icons)
+void WebExtensionAction::setIcons(RefPtr<JSON::Object> iconsObject)
 {
-    if ([(m_customIcons ?: @{ }) isEqualToDictionary:(icons ?: @{ })])
+    if (m_customIcons == iconsObject)
         return;
 
-    m_customIcons = icons.count ? icons : nil;
+    if (iconsObject) {
+        m_customIcons = iconsObject->size() ? iconsObject : nullptr;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-    m_customIconVariants = nil;
+        m_customIconVariants = nullptr;
 #endif
+    }
 
     clearIconCache();
     propertiesDidChange();
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
-void WebExtensionAction::setIconVariants(NSArray *iconVariants)
+void WebExtensionAction::setIconVariants(RefPtr<JSON::Array> iconsArray)
 {
-    if ([(m_customIconVariants ?: @[ ]) isEqualToArray:(iconVariants ?: @[ ])])
+    if (m_customIconVariants == iconsArray)
         return;
 
-    m_customIconVariants = iconVariants.count ? iconVariants : nil;
-    m_customIcons = nil;
+    if (iconsArray) {
+        m_customIconVariants = iconsArray->length() ? iconsArray : nullptr;
+        m_customIcons = nullptr;
+    }
 
     clearIconCache();
     propertiesDidChange();
@@ -798,8 +804,8 @@ void WebExtensionAction::setIconVariants(NSArray *iconVariants)
 
 void WebExtensionAction::clearIconCache()
 {
-    m_cachedIcon = nil;
-    m_cachedIconScales = nil;
+    m_cachedIcon = nullptr;
+    m_cachedIconScales = { };
     m_cachedIconIdealSize = CGSizeZero;
 }
 
