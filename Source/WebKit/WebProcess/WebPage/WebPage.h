@@ -437,7 +437,7 @@ class VisibleContentRectUpdateInfo;
 class RevealItem;
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
 class WebExtensionControllerProxy;
 #endif
 
@@ -1550,7 +1550,7 @@ public:
 
     inline UserContentControllerIdentifier userContentControllerIdentifier() const;
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     WebExtensionControllerProxy* webExtensionControllerProxy() const { return m_webExtensionController.get(); }
 #endif
 
@@ -2579,7 +2579,7 @@ private:
 
     Ref<WebUserContentController> m_userContentController;
 
-#if ENABLE(WK_WEB_EXTENSIONS)
+#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
     RefPtr<WebExtensionControllerProxy> m_webExtensionController;
 #endif
 
