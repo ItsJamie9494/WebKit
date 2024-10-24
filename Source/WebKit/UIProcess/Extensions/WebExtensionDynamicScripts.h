@@ -113,7 +113,9 @@ void executeScript(const SourcePairs&, WKWebView *, API::ContentWorld&, WebExten
 void injectStyleSheets(const SourcePairs&, WKWebView *, API::ContentWorld&, WebCore::UserStyleLevel, WebCore::UserContentInjectedFrames, WebExtensionContext&);
 void removeStyleSheets(const SourcePairs&, WKWebView *, WebCore::UserContentInjectedFrames, WebExtensionContext&);
 
+#if PLATFORM(COCOA)
 WebExtensionScriptInjectionResultParameters toInjectionResultParameters(id resultOfExecution, WKFrameInfo *, NSString *errorMessage);
+#endif
 
 } // namespace WebExtensionDynamicScripts
 

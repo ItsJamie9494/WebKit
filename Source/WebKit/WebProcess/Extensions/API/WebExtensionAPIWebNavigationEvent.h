@@ -45,12 +45,14 @@ class WebExtensionAPIWebNavigationEvent : public WebExtensionAPIObject, public J
     WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIWebNavigationEvent, webNavigationEvent, event);
 
 public:
+#if PLATFORM(COCOA)
     using FilterAndCallbackPair = std::pair<RefPtr<WebExtensionCallbackHandler>, RetainPtr<_WKWebExtensionWebNavigationURLFilter>>;
     using ListenerVector = Vector<FilterAndCallbackPair>;
 
     void invokeListenersWithArgument(id argument, NSURL *targetURL);
 
     const ListenerVector& listeners() const { return m_listeners; }
+#endif
 
     void addListener(WebPage&, RefPtr<WebExtensionCallbackHandler>, NSDictionary *filter, NSString **outExceptionString);
     void removeListener(WebPage&, RefPtr<WebExtensionCallbackHandler>);
@@ -73,7 +75,9 @@ private:
 
     Markable<WebPageProxyIdentifier> m_pageProxyIdentifier;
     WebExtensionEventListenerType m_type;
+#if PLATFORM(COCOA)
     ListenerVector m_listeners;
+#endif
 };
 
 } // namespace WebKit

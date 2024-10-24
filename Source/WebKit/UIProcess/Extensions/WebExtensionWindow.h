@@ -32,8 +32,10 @@
 #include "WebPageProxyIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/Identified.h>
+#if PLATFORM(COCOA)
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakObjCPtr.h>
+#endif
 
 OBJC_PROTOCOL(WKWebExtensionWindow);
 
@@ -123,12 +125,14 @@ public:
 
     bool isPrivate() const;
 
+#if PLATFORM(COCOA)
     // Returns the frame using top-down coordinates.
     CGRect normalizedFrame() const;
 
     // Handles the frame in the screen's native coordinate system.
     CGRect frame() const;
     void setFrame(CGRect, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
+#endif
 
 #if PLATFORM(MAC)
     CGRect screenFrame() const;
@@ -144,7 +148,9 @@ public:
 
 private:
     WeakPtr<WebExtensionContext> m_extensionContext;
+#if PLATFORM(COCOA)
     WeakObjCPtr<WKWebExtensionWindow> m_delegate;
+#endif
     bool m_isOpen : 1 { false };
     mutable bool m_private : 1 { false };
     mutable bool m_cachedPrivate : 1 { false };

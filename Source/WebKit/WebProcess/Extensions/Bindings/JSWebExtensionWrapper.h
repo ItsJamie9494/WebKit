@@ -29,7 +29,11 @@
 #include "WebFrame.h"
 #include "WebPage.h"
 #include <JavaScriptCore/JSRetainPtr.h>
+#if PLATFORM(COCOA)
 #include <JavaScriptCore/JavaScriptCore.h>
+#else
+#include <JavaScriptCore/JavaScript.h>
+#endif
 #include <wtf/WeakPtr.h>
 
 OBJC_CLASS NSString;
@@ -92,12 +96,12 @@ public:
 #endif
 
 private:
-#if PLATFORM(COCOA)
     WebExtensionCallbackHandler(JSValue *callbackFunction);
     WebExtensionCallbackHandler(JSContextRef, JSObjectRef resolveFunction, JSObjectRef rejectFunction);
     WebExtensionCallbackHandler(JSContextRef, JSObjectRef callbackFunction, WebExtensionAPIRuntimeBase&);
     WebExtensionCallbackHandler(JSContextRef, WebExtensionAPIRuntimeBase&);
 
+#if PLATFORM(COCOA)
     JSObjectRef m_callbackFunction = nullptr;
     JSObjectRef m_rejectFunction = nullptr;
     JSRetainPtr<JSGlobalContextRef> m_globalContext;

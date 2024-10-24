@@ -29,7 +29,9 @@
 
 #include "APIData.h"
 #include "APIObject.h"
+#if PLATFORM(COCOA) // FIXME: get VM and finish the icons code
 #include "CocoaImage.h"
+#endif
 #include "WebExtensionContentWorldType.h"
 #include "WebExtensionMatchPattern.h"
 #include <WebCore/UserStyleSheetTypes.h>
@@ -39,7 +41,9 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+#if PLATFORM(COCOA)
 #include <wtf/spi/cocoa/SecuritySPI.h>
+#endif
 
 OBJC_CLASS NSArray;
 OBJC_CLASS NSBundle;
@@ -222,9 +226,11 @@ public:
 
     Ref<API::Data> serializeLocalization();
 
+#if PLATFORM(COCOA) // FIXME: Is this only needed on Mac?
     NSBundle *bundle() const { return m_bundle.get(); }
     SecStaticCodeRef bundleStaticCode() const;
     NSData *bundleHash() const;
+#endif
 
 #if PLATFORM(MAC)
     bool validateResourceData(NSURL *, NSData *, NSError **);
@@ -251,9 +257,11 @@ public:
 
     const String& contentSecurityPolicy();
 
+#if PLATFORM(COCOA)
     CocoaImage *icon(CGSize idealSize);
 
     CocoaImage *actionIcon(CGSize idealSize);
+#endif
     NSString *displayActionLabel();
     NSString *actionPopupPath();
 
@@ -270,6 +278,7 @@ public:
     const String& sidebarTitle();
 #endif
 
+#if PLATFORM(COCOA)
     CocoaImage *imageForPath(NSString *, RefPtr<API::Error>&, CGSize sizeForResizing = CGSizeZero);
 
     size_t bestSizeInIconsDictionary(NSDictionary *, size_t idealPixelSize);
@@ -282,6 +291,7 @@ public:
     NSDictionary *iconsDictionaryForBestIconVariant(NSArray *, size_t idealPixelSize, ColorScheme);
     CocoaImage *bestImageForIconVariants(NSArray *, CGSize idealSize, const Function<void(Ref<API::Error>)>&);
     CocoaImage *bestImageForIconVariantsManifestKey(NSDictionary *, NSString *manifestKey, CGSize idealSize, RetainPtr<NSMutableDictionary>& cacheLocation, Error, NSString *customLocalizedDescription);
+#endif
 #endif
 
     bool hasBackgroundContent();
@@ -386,16 +396,20 @@ private:
 
     MatchPatternSet m_externallyConnectableMatchPatterns;
 
+#if PLATFORM(COCOA)
     RetainPtr<NSBundle> m_bundle;
     mutable RetainPtr<SecStaticCodeRef> m_bundleStaticCode;
-    URL m_resourceBaseURL;
     RetainPtr<NSDictionary> m_manifest;
+#endif
+    URL m_resourceBaseURL;
     Ref<const JSON::Value> m_manifestJSON;
     Resources m_resources;
 
     String m_defaultLocale;
     Vector<String> m_supportedLocales;
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionLocalization> m_localization;
+#endif
 
     Vector<Ref<API::Error>> m_errors;
 
@@ -405,13 +419,17 @@ private:
     String m_displayDescription;
     String m_version;
 
+#if PLATFORM(COCOA)
     RetainPtr<NSMutableDictionary> m_iconsCache;
 
     RetainPtr<NSDictionary> m_actionDictionary;
     RetainPtr<NSMutableDictionary> m_actionIconsCache;
+#if PLATFORM(COCOA)
     RetainPtr<CocoaImage> m_defaultActionIcon;
+#endif
     RetainPtr<NSString> m_displayActionLabel;
     RetainPtr<NSString> m_actionPopupPath;
+#endif
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
     HashMap<String, Ref<WebCore::Icon>> m_sidebarIconsCache;

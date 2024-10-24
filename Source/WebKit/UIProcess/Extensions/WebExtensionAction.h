@@ -28,7 +28,9 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "APIObject.h"
+#if PLATFORM(COCOA)
 #include "CocoaImage.h"
+#endif
 #include "WebExtensionTab.h"
 #include "WebExtensionWindow.h"
 #include <wtf/Forward.h>
@@ -90,10 +92,12 @@ public:
 
     void propertiesDidChange();
 
+#if PLATFORM(COCOA)
     CocoaImage *icon(CGSize);
     void setIcons(NSDictionary *);
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
     void setIconVariants(NSArray *);
+#endif
 #endif
 
     String label(FallbackWhenEmpty = FallbackWhenEmpty::Yes) const;
@@ -130,8 +134,10 @@ public:
     void setPopupPopoverAppearance(Appearance);
 #endif
 
+#if PLATFORM(COCOA)
     WKWebView *popupWebView();
     bool hasPopupWebView() const { return !!m_popupWebView; }
+#endif
 
     bool presentsPopupWhenReady() const { return m_presentsPopupWhenReady; }
     bool popupPresented() const { return m_popupPresented; }
@@ -170,11 +176,14 @@ private:
     Appearance m_popoverAppearance { Appearance::Default };
 #endif
 
+#if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionActionWebView> m_popupWebView;
     RetainPtr<_WKWebExtensionActionWebViewDelegate> m_popupWebViewDelegate;
+#endif
     String m_customPopupPath;
     String m_popupWebViewInspectionName;
 
+#if PLATFORM(COCOA)
     RetainPtr<CocoaImage> m_cachedIcon;
     RetainPtr<NSSet> m_cachedIconScales;
     CGSize m_cachedIconIdealSize { CGSizeZero };
@@ -182,6 +191,7 @@ private:
     RetainPtr<NSDictionary> m_customIcons;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
     RetainPtr<NSArray> m_customIconVariants;
+#endif
 #endif
     String m_customLabel;
     String m_customBadgeText;

@@ -45,6 +45,7 @@ class WebExtensionAPIWebRequestEvent : public WebExtensionAPIObject, public JSWe
     WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIWebRequestEvent, webRequestEvent, event);
 
 public:
+#if PLATFORM(COCOA)
     using FilterAndCallbackPair = std::pair<RefPtr<WebExtensionCallbackHandler>, RetainPtr<_WKWebExtensionWebRequestFilter>>;
     using ListenerVector = Vector<FilterAndCallbackPair>;
 
@@ -53,6 +54,7 @@ public:
     void addListener(WebPage&, RefPtr<WebExtensionCallbackHandler>, NSDictionary *filter, id extraInfoSpec, NSString **outExceptionString);
     void removeListener(WebPage&, RefPtr<WebExtensionCallbackHandler>);
     bool hasListener(RefPtr<WebExtensionCallbackHandler>);
+#endif
 
     void invokeListenersWithArgument(NSDictionary *argument, WebExtensionTabIdentifier, WebExtensionWindowIdentifier, const ResourceLoadInfo&);
 
@@ -73,7 +75,9 @@ private:
 
     Markable<WebPageProxyIdentifier> m_pageProxyIdentifier;
     WebExtensionEventListenerType m_type;
+#if PLATFORM(COCOA)
     ListenerVector m_listeners;
+#endif
 };
 
 } // namespace WebKit

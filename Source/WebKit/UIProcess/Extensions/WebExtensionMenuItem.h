@@ -27,7 +27,9 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#if PLATFORM(COCOA)
 #include "CocoaImage.h"
+#endif
 #include "WebExtension.h"
 #include "WebExtensionCommand.h"
 #include "WebExtensionMenuItemContextType.h"
@@ -97,7 +99,9 @@ public:
 
     WebExtensionCommand* command() const { return m_command.get(); }
 
+#if PLATFORM(COCOA)
     CocoaImage *icon(CGSize) const;
+#endif
 
     bool isChecked() const { return m_checked; }
     void setChecked(bool checked) { ASSERT(isCheckedType(type())); m_checked = checked; }
@@ -135,6 +139,7 @@ private:
 
     RefPtr<WebExtensionCommand> m_command;
 
+#if PLATFORM(COCOA)
     mutable RetainPtr<CocoaImage> m_cachedIcon;
     mutable RetainPtr<NSSet> m_cachedIconScales;
     mutable CGSize m_cachedIconIdealSize { CGSizeZero };
@@ -142,6 +147,7 @@ private:
     RetainPtr<NSDictionary> m_icons;
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
     RetainPtr<NSArray> m_iconVariants;
+#endif
 #endif
 
     bool m_checked : 1 { false };
