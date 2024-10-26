@@ -48,6 +48,9 @@ Ref<JSON::Array> filterObjects(const JSON::Array&, WTF::Function<bool(const JSON
 
 Vector<String> makeStringVector(const JSON::Array&);
 
+RefPtr<JSON::Object> JSONWithLowercaseKeys(RefPtr<JSON::Object>);
+RefPtr<JSON::Object> mergeJSON(RefPtr<JSON::Object>, RefPtr<JSON::Object>);
+
 #ifdef __OBJC__
 
 /// Verifies that a dictionary:

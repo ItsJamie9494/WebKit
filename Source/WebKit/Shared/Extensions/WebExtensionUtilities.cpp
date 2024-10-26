@@ -60,6 +60,37 @@ Vector<String> makeStringVector(const JSON::Array& array)
     return vector;
 }
 
+RefPtr<JSON::Object> JSONWithLowercaseKeys(RefPtr<JSON::Object> json)
+{
+    if (!json)
+        return json;
+
+    Ref<JSON::Object> newObject = JSON::Object::create();
+    for (String key : json->keys()) {
+        // FIXME: may need to match the type?
+        newObject->setValue(key.convertToASCIILowercase(), *json->getValue(key));
+    }
+
+    return newObject;
+}
+
+RefPtr<JSON::Object> mergeJSON(RefPtr<JSON::Object> jsonA, RefPtr<JSON::Object> jsonB)
+{
+    if (!jsonA)
+        return jsonA;
+
+    if (!jsonB)
+        return jsonB;
+
+    RefPtr<JSON::Object> mergedObject = jsonA.copyRef();
+    for (String key : jsonB->keys()) {
+        if (!mergedObject->getValue(key))
+            mergedObject->setValue(key, *jsonB->getValue(key));
+    }
+
+    return mergedObject;
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
