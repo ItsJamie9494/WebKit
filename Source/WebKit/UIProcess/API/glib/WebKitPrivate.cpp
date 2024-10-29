@@ -30,6 +30,10 @@
 #include <wpe/wpe.h>
 #endif
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+#include "WebExtension.h"
+#endif
+
 #if PLATFORM(GTK)
 unsigned toPlatformModifiers(OptionSet<WebKit::WebEventModifier> wkModifiers)
 {
@@ -149,6 +153,33 @@ unsigned toWebKitError(unsigned webCoreError)
         return webCoreError;
     }
 }
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+unsigned toWebKitWebExtensionError(unsigned apiError)
+{
+    switch (apiError) {
+    case static_cast<int>(WebKit::WebExtension::APIError::ResourceNotFound):
+        return WEBKIT_WEB_EXTENSION_ERROR_RESOURCE_NOT_FOUND;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidResourceCodeSignature):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_RESOURCE_CODE_SIGNATURE;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidManifest):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST;
+    case static_cast<int>(WebKit::WebExtension::APIError::UnsupportedManifestVersion):
+        return WEBKIT_WEB_EXTENSION_ERROR_UNSUPPORTED_MANIFEST_VERSION;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidManifestEntry):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST_ENTRY;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidDeclarativeNetRequestEntry):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_DECLARATIVE_NET_REQUEST_ENTRY;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidBackgroundPersistence):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_BACKGROUND_PERSISTENCE;
+    case static_cast<int>(WebKit::WebExtension::APIError::InvalidArchive):
+        return WEBKIT_WEB_EXTENSION_ERROR_INVALID_ARCHIVE;
+    case static_cast<int>(WebKit::WebExtension::APIError::Unknown):
+    default:
+        return WEBKIT_WEB_EXTENSION_ERROR_UNKNOWN;
+    }
+}
+#endif
 
 unsigned toWebCoreError(unsigned webKitError)
 {

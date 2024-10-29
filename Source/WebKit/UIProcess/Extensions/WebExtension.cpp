@@ -43,6 +43,8 @@ static constexpr auto actionManifestKey = "action"_s;
 static constexpr auto browserActionManifestKey = "browser_action"_s;
 static constexpr auto pageActionManifestKey = "page_action"_s;
 
+static constexpr auto defaultLocaleManifestKey = "default_locale"_s;
+
 static constexpr auto manifestVersionManifestKey = "manifest_version"_s;
 
 static constexpr auto nameManifestKey = "name"_s;
@@ -117,13 +119,10 @@ static constexpr auto sidebarActionPathManifestKey = "default_panel"_s;
 static constexpr auto sidePanelPathManifestKey = "default_path"_s;
 #endif // ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
 
-bool WebExtension::manifestParsedSuccessfully()
+WebExtension::WebExtension(Resources&& resources)
+    : m_manifestJSON(JSON::Value::null())
+    , m_resources(WTFMove(resources))
 {
-    if (m_parsedManifest)
-        return !!m_manifestJSON->asObject();
-
-    // If we haven't parsed yet, trigger a parse by calling the getter.
-    return !!manifest() && !!manifestObject();
 }
 
 double WebExtension::manifestVersion()
@@ -529,15 +528,17 @@ Ref<API::Error> WebExtension::createError(Error error, const String& customLocal
 Vector<Ref<API::Error>> WebExtension::errors()
 {
     populateDisplayStringsIfNeeded();
-    populateActionPropertiesIfNeeded();
     populateBackgroundPropertiesIfNeeded();
     populateContentScriptPropertiesIfNeeded();
     populatePermissionsPropertiesIfNeeded();
     populatePagePropertiesIfNeeded();
     populateContentSecurityPolicyStringsIfNeeded();
     populateWebAccessibleResourcesIfNeeded();
+#if PLATFORM(COCOA)
+    populateActionPropertiesIfNeeded();
     populateCommandsIfNeeded();
     populateDeclarativeNetRequestPropertiesIfNeeded();
+#endif
     populateExternallyConnectableIfNeeded();
 
     return m_errors;
@@ -696,7 +697,8 @@ void WebExtension::populateContentSecurityPolicyStringsIfNeeded()
             m_contentSecurityPolicy = policyObject->getString(contentSecurityPolicyExtensionPagesManifestKey);
             if (!m_contentSecurityPolicy && (!policyObject->size() || policyObject->getValue(contentSecurityPolicyExtensionPagesManifestKey)))
                 recordError(createError(Error::InvalidContentSecurityPolicy));
-        }
+        } else if (manifestObject->getValue(contentSecurityPolicyManifestKey))
+            recordError(createError(Error::InvalidContentSecurityPolicy));
     } else {
         m_contentSecurityPolicy = manifestObject->getString(contentSecurityPolicyManifestKey);
         if (!m_contentSecurityPolicy && manifestObject->getValue(contentSecurityPolicyManifestKey))

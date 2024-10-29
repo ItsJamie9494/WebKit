@@ -260,12 +260,6 @@ WebExtension::WebExtension(NSDictionary *manifest, Resources&& resources)
     m_resources.set("manifest.json"_s, API::Data::createWithoutCopying(manifestData));
 }
 
-WebExtension::WebExtension(Resources&& resources)
-    : m_manifestJSON(JSON::Value::null())
-    , m_resources(WTFMove(resources))
-{
-}
-
 bool WebExtension::parseManifest(NSData *manifestData)
 {
     NSError *parseError;
@@ -336,6 +330,15 @@ NSDictionary *WebExtension::manifest()
         return nil;
 
     return m_manifest.get();
+}
+
+bool WebExtension::manifestParsedSuccessfully()
+{
+    if (m_parsedManifest)
+        return !!m_manifestJSON->asObject();
+
+    // If we haven't parsed yet, trigger a parse by calling the getter.
+    return !!manifest() && !!manifestObject();
 }
 
 Ref<API::Data> WebExtension::serializeManifest()

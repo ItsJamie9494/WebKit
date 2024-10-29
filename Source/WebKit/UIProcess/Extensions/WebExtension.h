@@ -75,8 +75,12 @@ public:
         return adoptRef(*new WebExtension(std::forward<Args>(args)...));
     }
 
+#if PLATFORM(COCOA)
     explicit WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, RefPtr<API::Error>&);
     explicit WebExtension(NSDictionary *manifest, Resources&& = { });
+#else
+    explicit WebExtension(const JSON::Value& manifest, Resources&& = { });
+#endif
     explicit WebExtension(Resources&& = { });
 
     ~WebExtension() { }

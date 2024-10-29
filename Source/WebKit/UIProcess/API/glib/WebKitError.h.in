@@ -37,6 +37,10 @@ G_BEGIN_DECLS
 #define WEBKIT_SNAPSHOT_ERROR            webkit_snapshot_error_quark ()
 #define WEBKIT_USER_CONTENT_FILTER_ERROR webkit_user_content_filter_error_quark ()
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+#define WEBKIT_WEB_EXTENSION_ERROR       webkit_web_extension_error_quark ()
+#endif
+
 #if PLATFORM(GTK)
 #define WEBKIT_PRINT_ERROR               webkit_print_error_quark ()
 #endif
@@ -157,6 +161,34 @@ typedef enum {
     WEBKIT_SNAPSHOT_ERROR_FAILED_TO_CREATE = 799
 } WebKitSnapshotError;
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+/**
+ * WebKitWebExtensionError:
+ * @WEBKIT_WEB_EXTENSION_ERROR_UNKNOWN: An unknown error occured.
+ * @WEBKIT_WEB_EXTENSION_ERROR_RESOURCE_NOT_FOUND: A specified resource was not found on disk.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_RESOURCE_CODE_SIGNATURE: A resource failed the bundle's code signature checks.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST: An invalid `manifest.json` was encountered.
+ * @WEBKIT_WEB_EXTENSION_ERROR_UNSUPPORTED_MANIFEST_VERSION: The manifest version is not supported.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST_ENTRY: An invalid manifest entry was encountered.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_DECLARATIVE_NET_REQUEST_ENTRY: An invalid declarative net request entry was encountered.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_BACKGROUND_PERSISTENCE: The extension specified background persistence that was not compatible with the platform or features requested.
+ * @WEBKIT_WEB_EXTENSION_ERROR_INVALID_ARCHIVE: The archive file is invalid or corrupt.
+ *
+ * Enum values used to denote errors happening when parsing a #WebKitWebExtension
+ */
+typedef enum {
+    WEBKIT_WEB_EXTENSION_ERROR_UNKNOWN = 899,
+    WEBKIT_WEB_EXTENSION_ERROR_RESOURCE_NOT_FOUND = 800,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_RESOURCE_CODE_SIGNATURE = 801,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST = 802,
+    WEBKIT_WEB_EXTENSION_ERROR_UNSUPPORTED_MANIFEST_VERSION = 803,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_MANIFEST_ENTRY = 804,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_DECLARATIVE_NET_REQUEST_ENTRY = 805,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_BACKGROUND_PERSISTENCE = 806,
+    WEBKIT_WEB_EXTENSION_ERROR_INVALID_ARCHIVE = 807,
+} WebKitWebExtensionError;
+#endif
+
 /**
  * WebKitUserContentFilterError:
  * @WEBKIT_USER_CONTENT_FILTER_ERROR_INVALID_SOURCE: The JSON source for a content filter is invalid.
@@ -209,6 +241,11 @@ webkit_javascript_error_quark          (void);
 
 WEBKIT_API GQuark
 webkit_snapshot_error_quark            (void);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+WEBKIT_API GQuark
+webkit_web_extension_error_quark       (void);
+#endif
 
 WEBKIT_API GQuark
 webkit_user_content_filter_error_quark (void);

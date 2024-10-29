@@ -112,6 +112,20 @@ GQuark webkit_snapshot_error_quark()
     return g_quark_from_static_string("WebKitSnapshotError");
 }
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+/**
+ * webkit_web_extension_error_quark:
+ *
+ * Gets the quark for the domain of Web Extension errors.
+ *
+ * Returns: web extension error domain.
+ */
+GQuark webkit_web_extension_error_quark()
+{
+    return g_quark_from_static_string("WebKitWebExtensionError");
+}
+#endif
+
 /**
  * webkit_user_content_filter_error_quark:
  *
