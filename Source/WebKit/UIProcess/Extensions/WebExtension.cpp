@@ -2144,6 +2144,124 @@ void WebExtension::populateCommandsIfNeeded()
     }
 }
 
+std::optional<WebExtension::DeclarativeNetRequestRulesetData> WebExtension::parseDeclarativeNetRequestRulesetDictionary(const JSON::Object& rulesetObject, RefPtr<API::Error>& error)
+{
+    auto rulesetID = rulesetObject.getString(declarativeNetRequestRulesetIDManifestKey);
+    if (rulesetID.isEmpty()) {
+        error = createError(Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Empty `declarative_net_request` ruleset id.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty ruleset id"));
+        return { };
+    }
+
+    auto jsonPath = rulesetObject.getString(declarativeNetRequestRulePathManifestKey);
+    if (jsonPath.isEmpty()) {
+        error = createError(WebExtension::Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Empty `declarative_net_request` JSON path.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty JSON path"));
+        return { };
+    }
+
+    auto enabledBool = rulesetObject.getBoolean(declarativeNetRequestRuleEnabledManifestKey);
+    if (!enabledBool) {
+        error = createError(WebExtension::Error::InvalidDeclarativeNetRequest, "`declarative_net_request` missing enabled boolean");
+        return { };
+    }
+
+    DeclarativeNetRequestRulesetData rulesetData = {
+        rulesetID,
+        *enabledBool,
+        jsonPath
+    };
+
+    return std::optional { WTFMove(rulesetData) };
+}
+
+void WebExtension::populateDeclarativeNetRequestPropertiesIfNeeded()
+{
+    if (m_parsedManifestDeclarativeNetRequestRulesets)
+        return;
+
+    m_parsedManifestDeclarativeNetRequestRulesets = true;
+
+    RefPtr manifestObject = this->manifestObject();
+    if (!manifestObject)
+        return;
+
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/declarative_net_request
+
+    if (!supportedPermissions().contains(WebExtensionPermission::declarativeNetRequest()) && !supportedPermissions().contains(WebExtensionPermission::declarativeNetRequestWithHostAccess())) {
+        recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Manifest has no `declarativeNetRequest` permission.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for missing declarativeNetRequest permission")));
+        return;
+    }
+
+    RefPtr declarativeNetRequestManifestObject = manifestObject->getObject(declarativeNetRequestManifestKey);
+    if (!declarativeNetRequestManifestDictionary) {
+        if (manifestObject->getValue(declarativeNetRequestManifestKey))
+            recordError(createError(Error::InvalidDeclarativeNetRequest));
+        return;
+    }
+
+    RefPtr declarativeNetRequestRulesets = declarativeNetRequestManifestObject->getArray(declarativeNetRequestRulesManifestKey);
+    if (!declarativeNetRequestRulesManifestKey) {
+        if (manifestObject->getValue(declarativeNetRequestManifestKey))
+            recordError(createError(Error::InvalidDeclarativeNetRequest));
+        return;
+    }
+
+    if (declarativeNetRequestRulesets->size() > webExtensionDeclarativeNetRequestMaximumNumberOfStaticRulesets)
+        recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_STRING("Exceeded maximum number of `declarative_net_request` rulesets. Ignoring extra rulesets.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many rulesets")));
+
+    int rulesetCount, enabledRulesetCount = 0;
+    bool recordedTooManyRulesetsManifestError = false;
+    HashSet<String> seenRulesetIDs;
+    for (RefPtr value : declarativeNetRequestRulesets) {
+        if (rulesetCount >= webExtensionDeclarativeNetRequestMaximumNumberOfStaticRulesets)
+            continue;
+        
+        RefPtr object = value->asObject();
+        if (!object)
+            continue;
+        
+        RefPtr<API::Error> error;
+        auto optionalRuleset = parseDeclarativeNetRequestRulesetDictionary(*object, error);
+        if (!optionalRuleset) {
+            if (error)
+                recordError(createError(Error::InvalidDeclarativeNetRequest, { }, error));
+            continue;
+        }
+
+        auto ruleset = optionalRuleset.value();
+        if (seenRulesetIDs.contains(ruleset.rulesetID)) {
+            recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_FORMAT_STRING("`declarative_net_request` ruleset with id \"%@\" is invalid. Ruleset id must be unique.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for duplicate ruleset id", (NSString *)ruleset.rulesetID)));
+            continue;
+        }
+
+        if (ruleset.enabled && ++enabledRulesetCount > webExtensionDeclarativeNetRequestMaximumNumberOfEnabledRulesets && !recordedTooManyRulesetsManifestError) {
+            recordError(createError(Error::InvalidDeclarativeNetRequest, WEB_UI_FORMAT_STRING("Exceeded maximum number of enabled `declarative_net_request` static rulesets. The first %lu will be applied, the remaining will be ignored.", "WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many enabled static rulesets", webExtensionDeclarativeNetRequestMaximumNumberOfEnabledRulesets)));
+            recordedTooManyRulesetsManifestError = true;
+            continue;
+        }
+
+        seenRulesetIDs.add(ruleset.rulesetID);
+        ++rulesetCount;
+
+        m_declarativeNetRequestRulesets.append(ruleset);
+    }
+}
+
+const WebExtension::DeclarativeNetRequestRulesetVector& WebExtension::declarativeNetRequestRulesets()
+{
+    populateDeclarativeNetRequestPropertiesIfNeeded();
+    return m_declarativeNetRequestRulesets;
+}
+
+std::optional<WebExtension::DeclarativeNetRequestRulesetData> WebExtension::declarativeNetRequestRuleset(const String& identifier)
+{
+    for (auto& ruleset : declarativeNetRequestRulesets()) {
+        if (ruleset.rulesetID == identifier)
+            return ruleset;
+    }
+
+    return std::nullopt;
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
