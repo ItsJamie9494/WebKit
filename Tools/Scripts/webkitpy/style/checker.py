@@ -215,6 +215,11 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'gtk'),
       os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'wpe')],
      ["-readability/enum_casing"]),
+    
+    ([
+      # The GTK APIs may use lowercase acronyms, such as "url" in API naming.
+      os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'glib')],
+     ["-readability/naming/acronym"]),
 
     ([
      # Forward declarations of GLib/GIO functions use underscores.
