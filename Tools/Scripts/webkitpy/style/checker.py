@@ -200,6 +200,11 @@ _PATH_RULES_SPECIFIER = [
      ["-runtime/wtf_make_unique", "-readability/naming/underscores", "-readability/naming/acronym"]),
 
     ([
+        # The MatchPattern API uses a lowercase "url" to match GObject standard naming schemes
+        os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'glib', 'WebKitWebExtensionMatchPattern.cpp')],
+     ["-readability/naming/acronym"]),
+
+    ([
       # The GTK+ and WPE APIs use upper case, underscore separated, words in
       # certain types of enums (e.g. signals, properties).
       os.path.join('Source', 'JavaScriptCore', 'API', 'glib'),
