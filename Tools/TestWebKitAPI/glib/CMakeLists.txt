@@ -1,6 +1,7 @@
 set(WebKitGLibAPITests_SOURCES
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/LoadTrackingTest.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/TestMain.cpp
+    ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebExtensionUtilities.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp
 )
@@ -187,6 +188,8 @@ ADD_WK2_TEST(TestWebsiteData ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWeb
 ADD_WK2_TEST(TestDOMElement ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestDOMElement.cpp)
 ADD_WK2_TEST(TestGeolocationManager ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestGeolocationManager.cpp)
 ADD_WK2_TEST(TestInputMethodContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestInputMethodContext.cpp)
+ADD_WK2_TEST(TestWebKitWebExtension ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtension.cpp)
+ADD_WK2_TEST(TestWebKitWebExtensionMatchPattern ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtensionMatchPattern.cpp)
 
 if (ENABLE_2022_GLIB_API)
     ADD_WK2_TEST(TestWebKitNetworkSession ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitNetworkSession.cpp)

@@ -74,6 +74,8 @@ Shared/API/glib/WebKitURIRequest.cpp @no-unify
 Shared/API/glib/WebKitURIResponse.cpp @no-unify
 Shared/API/glib/WebKitUserMessage.cpp @no-unify
 
+Shared/Extensions/glib/WebExtensionUtilitiesGlib.cpp
+
 Shared/freetype/WebCoreArgumentCodersFreeType.cpp
 
 Shared/glib/ArgumentCodersGLib.cpp
@@ -178,6 +180,7 @@ UIProcess/API/glib/WebKitUserContentManager.cpp @no-unify
 UIProcess/API/glib/WebKitUserMediaPermissionRequest.cpp @no-unify
 UIProcess/API/glib/WebKitVersion.cpp @no-unify
 UIProcess/API/glib/WebKitWebContext.cpp @no-unify
+UIProcess/API/glib/WebKitWebExtension.cpp @no-unify
 UIProcess/API/glib/WebKitWebExtensionMatchPattern.cpp @no-unify
 UIProcess/API/glib/WebKitWebResource.cpp @no-unify
 UIProcess/API/glib/WebKitWebResourceLoadManager.cpp @no-unify
@@ -221,6 +224,8 @@ UIProcess/Automation/cairo/WebAutomationSessionCairo.cpp
 UIProcess/Automation/gtk/WebAutomationSessionGtk.cpp @no-unify
 
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
+
+UIProcess/Extensions/gtk/WebExtensionGtk.cpp
 
 UIProcess/Gamepad/gtk/UIGamepadProviderGtk.cpp
 UIProcess/Gamepad/manette/UIGamepadProviderManette.cpp
