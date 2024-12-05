@@ -194,6 +194,7 @@ set(WebKitGTK_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitUserMediaPermissionRequest.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitUserMessage.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebContext.h.in
+    ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebExtensionMatchPattern.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebResource.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebView.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitWebViewSessionState.h.in
@@ -389,6 +390,7 @@ GENERATE_GLIB_API_HEADERS(WebKit WebKitGTK_HEADER_TEMPLATES
     "-DWTF_PLATFORM_GTK=1"
     "-DWTF_PLATFORM_WPE=0"
     "-DUSE_GTK4=$<BOOL:${USE_GTK4}>"
+    "-DENABLE_WK_WEB_EXTENSIONS=$<BOOL:${ENABLE_WK_WEB_EXTENSIONS}>"
     "-DENABLE_2022_GLIB_API=$<BOOL:${ENABLE_2022_GLIB_API}>"
     "-DUSE_GI_FINISH_FUNC_ANNOTATION=${USE_GI_FINISH_FUNC_ANNOTATION}"
 )
