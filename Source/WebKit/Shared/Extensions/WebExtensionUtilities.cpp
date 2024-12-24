@@ -98,6 +98,29 @@ RefPtr<JSON::Object> mergeJSON(RefPtr<JSON::Object> jsonA, RefPtr<JSON::Object> 
     return mergedObject;
 }
 
+Ref<JSON::Object> toWebAPI(HashMap<String, String>& map)
+{
+    Ref object = JSON::Object::create();
+
+    for (auto i : map.keys()) {
+        RefPtr value = JSON::Value::create(map.get(i));
+        object->setValue(i, *value);
+    }
+
+    return object;
+}
+
+template<>
+HashMap<String, String> objectToMap(const JSON::Object& object)
+{
+    HashMap<String, String> result;
+
+    for (auto i : object.keys())
+        result.set(i, object.getString(i));
+
+    return result;
+}
+
 } // namespace WebKit
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

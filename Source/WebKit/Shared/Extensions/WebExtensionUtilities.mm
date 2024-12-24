@@ -297,7 +297,7 @@ bool validateDictionary(NSDictionary<NSString *, id> *dictionary, NSString *sour
         errorString = [NSString stringWithFormat:@"it is missing required keys: %@", formatList(remainingRequiredKeys.allObjects)];
 
     if (errorString && outExceptionString)
-        *outExceptionString = toErrorString(nil, sourceKey, errorString);
+        *outExceptionString = toErrorString(nullString(), sourceKey, errorString);
 
     return !errorString;
 }
@@ -310,7 +310,7 @@ bool validateObject(NSObject *object, NSString *sourceKey, id expectedValueType,
     validate(nil, object, expectedValueType, &errorString);
 
     if (errorString && outExceptionString)
-        *outExceptionString = toErrorString(nil, sourceKey, errorString);
+        *outExceptionString = toErrorString(nullString(), sourceKey, errorString);
 
     return !errorString;
 }
@@ -330,32 +330,37 @@ inline NSString* trimTrailingPeriod(NSString *input)
     return [input hasSuffix:@"."] ? [input substringToIndex:input.length - 1] : input;
 }
 
-NSString *toErrorString(NSString *callingAPIName, NSString *sourceKey, NSString *underlyingErrorString, ...)
+String toErrorString(const String& callingAPIName, const String& sourceKey, String underlyingErrorString, ...)
 {
-    ASSERT(underlyingErrorString.length);
+    // FIXME: This function needs to be rewritten to support variadic format strings on more than just Cocoa
+    NSString *cocoaCallingAPIName = callingAPIName;
+    NSString *cocoaSourceKey = sourceKey;
+    NSString *cocoaUnderlyingErrorString = underlyingErrorString;
+
+    ASSERT(cocoaUnderlyingErrorString.length);
 
     va_list arguments;
     va_start(arguments, underlyingErrorString);
 
     ALLOW_NONLITERAL_FORMAT_BEGIN
-    NSString *formattedUnderlyingErrorString = trimTrailingPeriod([[NSString alloc] initWithFormat:underlyingErrorString arguments:arguments]);
+    NSString *formattedUnderlyingErrorString = trimTrailingPeriod([[NSString alloc] initWithFormat:cocoaUnderlyingErrorString arguments:arguments]);
     ALLOW_NONLITERAL_FORMAT_END
 
     va_end(arguments);
 
-    if (UNLIKELY(callingAPIName.length && sourceKey.length && [formattedUnderlyingErrorString containsString:@"value is invalid"])) {
+    if (UNLIKELY(cocoaCallingAPIName.length && cocoaSourceKey.length && [formattedUnderlyingErrorString containsString:@"value is invalid"])) {
         ASSERT_NOT_REACHED_WITH_MESSAGE("Overly nested error string, use a `nil` sourceKey for this call instead.");
-        sourceKey = nil;
+        cocoaSourceKey = nil;
     }
 
-    if (callingAPIName.length && sourceKey.length)
-        return [NSString stringWithFormat:@"Invalid call to %@. The '%@' value is invalid, because %@.", callingAPIName, sourceKey, lowercaseFirst(formattedUnderlyingErrorString)];
+    if (cocoaCallingAPIName.length && cocoaSourceKey.length)
+        return [NSString stringWithFormat:@"Invalid call to %@. The '%@' value is invalid, because %@.", cocoaCallingAPIName, cocoaSourceKey, lowercaseFirst(formattedUnderlyingErrorString)];
 
-    if (!callingAPIName.length && sourceKey.length)
-        return [NSString stringWithFormat:@"The '%@' value is invalid, because %@.", sourceKey, lowercaseFirst(formattedUnderlyingErrorString)];
+    if (!cocoaCallingAPIName.length && cocoaSourceKey.length)
+        return [NSString stringWithFormat:@"The '%@' value is invalid, because %@.", cocoaSourceKey, lowercaseFirst(formattedUnderlyingErrorString)];
 
-    if (callingAPIName.length)
-        return [NSString stringWithFormat:@"Invalid call to %@. %@.", callingAPIName, uppercaseFirst(formattedUnderlyingErrorString)];
+    if (cocoaCallingAPIName.length)
+        return [NSString stringWithFormat:@"Invalid call to %@. %@.", cocoaCallingAPIName, uppercaseFirst(formattedUnderlyingErrorString)];
 
     return formattedUnderlyingErrorString;
 }

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -1682,6 +1682,8 @@
 		7CF47FF717275B71008ACB91 /* WKBundlePageBanner.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FF517275B71008ACB91 /* WKBundlePageBanner.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		7CF47FFB17275C57008ACB91 /* PageBanner.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FF917275C57008ACB91 /* PageBanner.h */; };
 		7CF47FFF17276AE3008ACB91 /* WKBundlePageBannerMac.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FFD17276AE3008ACB91 /* WKBundlePageBannerMac.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		7D225DD62D1E1675008B4329 /* UnifiedSource138.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D225DD42D1E1675008B4329 /* UnifiedSource138.cpp */; };
+		7D225DD72D1E1675008B4329 /* UnifiedSource139.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D225DD52D1E1675008B4329 /* UnifiedSource139.cpp */; };
 		8310428B1BD6B66F00A715E4 /* NetworkCacheSubresourcesEntry.h in Headers */ = {isa = PBXBuildFile; fileRef = 831042891BD6B66F00A715E4 /* NetworkCacheSubresourcesEntry.h */; };
 		8313F7EC1F7DAE0800B944EB /* SharedStringHashStore.h in Headers */ = {isa = PBXBuildFile; fileRef = 8313F7E91F7DAE0300B944EB /* SharedStringHashStore.h */; };
 		8313F7EE1F7DAE0800B944EB /* SharedStringHashTable.h in Headers */ = {isa = PBXBuildFile; fileRef = 8313F7E71F7DAE0300B944EB /* SharedStringHashTable.h */; };
@@ -1991,7 +1993,6 @@
 		B6A2923E2B193ED50061930E /* _WKWebExtensionSQLiteDatabase.mm in Sources */ = {isa = PBXBuildFile; fileRef = B6A2923C2B193ED50061930E /* _WKWebExtensionSQLiteDatabase.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B6B1565C2B5E177A004F9894 /* WebExtensionDataType.h in Headers */ = {isa = PBXBuildFile; fileRef = B6B156582B5E1779004F9894 /* WebExtensionDataType.h */; };
 		B6B1565E2B5E177A004F9894 /* WebExtensionStorageAccessLevel.h in Headers */ = {isa = PBXBuildFile; fileRef = B6B1565A2B5E177A004F9894 /* WebExtensionStorageAccessLevel.h */; };
-		B6B156612B5E2618004F9894 /* WebExtensionContextAPIStorageCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = B6B156602B5E2618004F9894 /* WebExtensionContextAPIStorageCocoa.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B6B156682B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.mm in Sources */ = {isa = PBXBuildFile; fileRef = B6B156662B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B6B156692B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.h in Headers */ = {isa = PBXBuildFile; fileRef = B6B156672B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.h */; };
 		B6BF18352B1A49EF00FA39D3 /* _WKWebExtensionSQLiteStatement.mm in Sources */ = {isa = PBXBuildFile; fileRef = B6BF18332B1A49EE00FA39D3 /* _WKWebExtensionSQLiteStatement.mm */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -6628,6 +6629,21 @@
 		7CF47FF917275C57008ACB91 /* PageBanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PageBanner.h; sourceTree = "<group>"; };
 		7CF47FFC17276AE3008ACB91 /* WKBundlePageBannerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKBundlePageBannerMac.mm; sourceTree = "<group>"; };
 		7CF47FFD17276AE3008ACB91 /* WKBundlePageBannerMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageBannerMac.h; sourceTree = "<group>"; };
+		7D225DD42D1E1675008B4329 /* UnifiedSource138.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource138.cpp; path = UnifiedSource138.cpp; sourceTree = "<group>"; };
+		7D225DD52D1E1675008B4329 /* UnifiedSource139.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = UnifiedSource139.cpp; path = UnifiedSource139.cpp; sourceTree = "<group>"; };
+		7D49D11B2D1AA0E600C6855E /* WebExtensionContextAPIStorage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionContextAPIStorage.cpp; sourceTree = "<group>"; };
+		7D49D11F2D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatabase.h; sourceTree = "<group>"; };
+		7D49D1202D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteDatabase.cpp; sourceTree = "<group>"; };
+		7D49D1212D1AA1AE00C6855E /* WebExtensionSQLiteDatatypeTraits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatatypeTraits.h; sourceTree = "<group>"; };
+		7D49D1222D1AA1AE00C6855E /* WebExtensionSQLiteHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteHelpers.h; sourceTree = "<group>"; };
+		7D49D1232D1AA1AE00C6855E /* WebExtensionSQLiteRow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteRow.h; sourceTree = "<group>"; };
+		7D49D1242D1AA1AE00C6855E /* WebExtensionSQLiteRow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteRow.cpp; sourceTree = "<group>"; };
+		7D49D1252D1AA1AE00C6855E /* WebExtensionSQLiteStatement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteStatement.h; sourceTree = "<group>"; };
+		7D49D1262D1AA1AE00C6855E /* WebExtensionSQLiteStatement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteStatement.cpp; sourceTree = "<group>"; };
+		7D49D1272D1AA1AE00C6855E /* WebExtensionSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteStore.h; sourceTree = "<group>"; };
+		7D49D1282D1AA1AE00C6855E /* WebExtensionSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteStore.cpp; sourceTree = "<group>"; };
+		7D49D1292D1AA44900C6855E /* WebExtensionStorageSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionStorageSQLiteStore.h; sourceTree = "<group>"; };
+		7D49D12A2D1AA44900C6855E /* WebExtensionStorageSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionStorageSQLiteStore.cpp; sourceTree = "<group>"; };
 		7D5151492CF818CA0035DD16 /* WebExtensionLocalization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionLocalization.h; sourceTree = "<group>"; };
 		7D51514A2CF818CA0035DD16 /* WebExtensionLocalization.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionLocalization.cpp; sourceTree = "<group>"; };
 		7D51514B2CF818CA0035DD16 /* WebExtensionUtilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionUtilities.cpp; sourceTree = "<group>"; };
@@ -7232,7 +7248,6 @@
 		B6B156592B5E1779004F9894 /* WebExtensionStorage.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WebExtensionStorage.serialization.in; sourceTree = "<group>"; };
 		B6B1565A2B5E177A004F9894 /* WebExtensionStorageAccessLevel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionStorageAccessLevel.h; sourceTree = "<group>"; };
 		B6B1565B2B5E177A004F9894 /* WebExtensionContextParameters.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WebExtensionContextParameters.serialization.in; sourceTree = "<group>"; };
-		B6B156602B5E2618004F9894 /* WebExtensionContextAPIStorageCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionContextAPIStorageCocoa.mm; sourceTree = "<group>"; };
 		B6B156662B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = _WKWebExtensionStorageSQLiteStore.mm; path = UIProcess/Extensions/Cocoa/_WKWebExtensionStorageSQLiteStore.mm; sourceTree = SOURCE_ROOT; };
 		B6B156672B5E47A8004F9894 /* _WKWebExtensionStorageSQLiteStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = _WKWebExtensionStorageSQLiteStore.h; path = UIProcess/Extensions/Cocoa/_WKWebExtensionStorageSQLiteStore.h; sourceTree = SOURCE_ROOT; };
 		B6BF18332B1A49EE00FA39D3 /* _WKWebExtensionSQLiteStatement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKWebExtensionSQLiteStatement.mm; sourceTree = "<group>"; };
@@ -9819,7 +9834,6 @@
 				1C4A14C72ABBBA3900A1018C /* WebExtensionContextAPIRuntimeCocoa.mm */,
 				B624FF142ABE4CB000F6EDF6 /* WebExtensionContextAPIScriptingCocoa.mm */,
 				0237F5EB2C4EC76800AD23EF /* WebExtensionContextAPISidebarCocoa.mm */,
-				B6B156602B5E2618004F9894 /* WebExtensionContextAPIStorageCocoa.mm */,
 				1C1D9C862AAA4143007DE31E /* WebExtensionContextAPITabsCocoa.mm */,
 				33B5A80E2AFD5DE800A15D40 /* WebExtensionContextAPIWebNavigationCocoa.mm */,
 				1C49579A2A9813AA007D0B64 /* WebExtensionContextAPIWindowsCocoa.mm */,
@@ -10436,6 +10450,9 @@
 		1CC23B1A288732A800D0A65A /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				7D49D1292D1AA44900C6855E /* WebExtensionStorageSQLiteStore.h */,
+				7D49D12A2D1AA44900C6855E /* WebExtensionStorageSQLiteStore.cpp */,
+				7D49D11E2D1AA14700C6855E /* API */,
 				1C627476288A1DDE00CED3A2 /* Cocoa */,
 				1CC78CD92C95F159003E3CDD /* WebExtension.cpp */,
 				1C3BEB5E2888710500E66E38 /* WebExtension.h */,
@@ -10786,6 +10803,8 @@
 		2D7DEBE221269E4B00B9F73C /* unified-sources */ = {
 			isa = PBXGroup;
 			children = (
+				7D225DD42D1E1675008B4329 /* UnifiedSource138.cpp */,
+				7D225DD52D1E1675008B4329 /* UnifiedSource139.cpp */,
 				7B9FC5C428A526F5007570E7 /* PlatformUnifiedSource1-mm.mm */,
 				7B9FC59628A28D13007570E7 /* PlatformUnifiedSource1.cpp */,
 				7B9FC5C628A52702007570E7 /* PlatformUnifiedSource2-mm.mm */,
@@ -13313,6 +13332,14 @@
 			path = cocoa;
 			sourceTree = "<group>";
 		};
+		7D49D11E2D1AA14700C6855E /* API */ = {
+			isa = PBXGroup;
+			children = (
+				7D49D11B2D1AA0E600C6855E /* WebExtensionContextAPIStorage.cpp */,
+			);
+			path = API;
+			sourceTree = "<group>";
+		};
 		7EC4F0F818E4A922008056AF /* cocoa */ = {
 			isa = PBXGroup;
 			children = (
@@ -13759,6 +13786,16 @@
 		B6114A8A293AE03600380B1B /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				7D49D11F2D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.h */,
+				7D49D1202D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.cpp */,
+				7D49D1212D1AA1AE00C6855E /* WebExtensionSQLiteDatatypeTraits.h */,
+				7D49D1222D1AA1AE00C6855E /* WebExtensionSQLiteHelpers.h */,
+				7D49D1232D1AA1AE00C6855E /* WebExtensionSQLiteRow.h */,
+				7D49D1242D1AA1AE00C6855E /* WebExtensionSQLiteRow.cpp */,
+				7D49D1252D1AA1AE00C6855E /* WebExtensionSQLiteStatement.h */,
+				7D49D1262D1AA1AE00C6855E /* WebExtensionSQLiteStatement.cpp */,
+				7D49D1272D1AA1AE00C6855E /* WebExtensionSQLiteStore.h */,
+				7D49D1282D1AA1AE00C6855E /* WebExtensionSQLiteStore.cpp */,
 				1CA584002CF14036002C6DAD /* Cocoa */,
 				B6D75B1C2B1FD0BE00BC932E /* _WKWebExtensionRegisteredScriptsSQLiteStore.h */,
 				B6D75B1B2B1FD0BE00BC932E /* _WKWebExtensionRegisteredScriptsSQLiteStore.mm */,
@@ -20024,11 +20061,12 @@
 				1C78656E2AD1FD4F00EF3082 /* WebExtensionContextAPIExtensionCocoa.mm in Sources */,
 				1C6B84BA2B0BE3A300E885DD /* WebExtensionContextAPIMenusCocoa.mm in Sources */,
 				B65DA1DD294BDE4700DB503A /* WebExtensionContextAPIPermissionsCocoa.mm in Sources */,
+				7D225DD62D1E1675008B4329 /* UnifiedSource138.cpp in Sources */,
+				7D225DD72D1E1675008B4329 /* UnifiedSource139.cpp in Sources */,
 				1C9A15D32ABE2F4B002CC12A /* WebExtensionContextAPIPortCocoa.mm in Sources */,
 				1C4A14C82ABBBA3900A1018C /* WebExtensionContextAPIRuntimeCocoa.mm in Sources */,
 				B624FF152ABE4CB100F6EDF6 /* WebExtensionContextAPIScriptingCocoa.mm in Sources */,
 				0237F5EC2C4EC77300AD23EF /* WebExtensionContextAPISidebarCocoa.mm in Sources */,
-				B6B156612B5E2618004F9894 /* WebExtensionContextAPIStorageCocoa.mm in Sources */,
 				1C1D9C872AAA4143007DE31E /* WebExtensionContextAPITabsCocoa.mm in Sources */,
 				33B5A80F2AFD5DE800A15D40 /* WebExtensionContextAPIWebNavigationCocoa.mm in Sources */,
 				1C49579B2A9813AA007D0B64 /* WebExtensionContextAPIWindowsCocoa.mm in Sources */,
@@ -20238,9 +20276,7 @@
 		};
 		5C400E6A29DB8AB500446F6F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5C139DA129DB82E500D5117B /* WebContentCaptivePortalExtension */;
 			targetProxy = 5C400E6929DB8AB500446F6F /* PBXContainerItemProxy */;
 		};
@@ -20256,25 +20292,19 @@
 		};
 		5CE4B60729CEBB760038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CA5A2C929CBBA1A000F1046 /* WebContentExtension */;
 			targetProxy = 5CE4B60629CEBB760038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62329CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CE4B61529CF877F0038F565 /* GPUExtension */;
 			targetProxy = 5CE4B62229CF880B0038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62529CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 5CE4B60829CF87680038F565 /* NetworkingExtension */;
 			targetProxy = 5CE4B62429CF880B0038F565 /* PBXContainerItemProxy */;
 		};
