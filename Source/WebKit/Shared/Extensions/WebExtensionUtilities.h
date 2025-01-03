@@ -48,6 +48,11 @@ Ref<JSON::Array> filterObjects(const JSON::Array&, WTF::Function<bool(const JSON
 
 Vector<String> makeStringVector(const JSON::Array&);
 
+Ref<JSON::Object> toWebAPI(HashMap<String, String>&);
+
+template<typename T>
+HashMap<String, T> objectToMap(const JSON::Object&);
+
 Vector<double> availableScreenScales();
 double largestDisplayScale();
 

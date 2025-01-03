@@ -31,6 +31,16 @@
 
 namespace WebKit {
 
+ Ref<JSON::Object> toWebAPI(HashMap<String, String>& map)
+ {
+    Ref result = JSON::Object::create();
+
+    for (auto& i : map)
+        result->setString(i.key, i.value);
+    
+    return result;
+ }
+
 Ref<JSON::Array> filterObjects(const JSON::Array& array, WTF::Function<bool(const JSON::Value&)>&& lambda)
 {
     auto result = JSON::Array::create();
@@ -97,6 +107,17 @@ RefPtr<JSON::Object> mergeJSON(RefPtr<JSON::Object> jsonA, RefPtr<JSON::Object> 
     }
 
     return mergedObject;
+}
+
+template<>
+HashMap<String, String> objectToMap(const JSON::Object& object)
+{
+    HashMap<String, String> result;
+
+    for (auto i : object.keys())
+        result.set(i, object.getString(i));
+
+    return result;
 }
 
 WTF_ATTRIBUTE_PRINTF(1, 0)

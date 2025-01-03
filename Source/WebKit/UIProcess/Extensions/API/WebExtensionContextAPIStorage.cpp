@@ -23,158 +23,165 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !__has_feature(objc_arc)
-#error This file requires ARC. Add the "-fobjc-arc" compiler flag for this file.
-#endif
-
-#import "config.h"
-#import "WebExtensionContext.h"
+#include "config.h"
+#include "WebExtensionContext.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#import "CocoaHelpers.h"
-#import "WebExtensionConstants.h"
-#import "WebExtensionContextProxy.h"
-#import "WebExtensionContextProxyMessages.h"
-#import "WebExtensionDataType.h"
-#import "WebExtensionStorageAccessLevel.h"
-#import "WebExtensionUtilities.h"
-#import "_WKWebExtensionStorageSQLiteStore.h"
-#import <wtf/BlockPtr.h>
-#import <wtf/cocoa/VectorCocoa.h>
-#import <wtf/text/MakeString.h>
+#include "WebExtensionConstants.h"
+#include "WebExtensionContextProxy.h"
+#include "WebExtensionContextProxyMessages.h"
+#include "WebExtensionDataType.h"
+#include "WebExtensionPermission.h"
+#include "WebExtensionStorageAccessLevel.h"
+#include "WebExtensionStorageSQLiteStore.h"
+#include "WebExtensionUtilities.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebKit {
 
 bool WebExtensionContext::isStorageMessageAllowed()
 {
-    return isLoaded() && (hasPermission(WKWebExtensionPermissionStorage) || hasPermission(WKWebExtensionPermissionUnlimitedStorage));
+    return isLoaded() && (hasPermission(WebExtensionPermission::storage()) || hasPermission(WebExtensionPermission::unlimitedStorage()));
 }
 
 void WebExtensionContext::storageGet(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, const Vector<String>& keys, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".get()"_s);
 
-    auto *storage = storageForType(dataType);
-    [storage getValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *values, NSString *errorMessage) mutable {
-        if (errorMessage)
+    Ref storage = storageForType(dataType);
+    storage->getValuesForKeys(keys, [callingAPIName, completionHandler = WTFMove(completionHandler)](HashMap<String, String> values, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty())
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
-        else
-            completionHandler(String(encodeJSONString(values)));
-    }).get()];
+        else {
+            Ref jsonObject = toWebAPI(values);
+            completionHandler(jsonObject->toJSONString());
+        }
+    });
 }
 
 void WebExtensionContext::storageGetKeys(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, CompletionHandler<void(Expected<Vector<String>, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".getKeys()"_s);
 
-    auto *storage = storageForType(dataType);
-    [storage getAllKeys:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](NSArray<NSString *> *keys, NSString *errorMessage) mutable {
-        if (errorMessage)
+    Ref storage = storageForType(dataType);
+    storage->getAllKeys([callingAPIName, completionHandler = WTFMove(completionHandler)](Vector<String> keys, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty())
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
         else
-            completionHandler(makeVector<String>(keys));
-    }).get()];
+            completionHandler(keys);
+    });
 }
 
 void WebExtensionContext::storageGetBytesInUse(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, const Vector<String>& keys, CompletionHandler<void(Expected<size_t, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".getBytesInUse()"_s);
 
-    auto *storage = storageForType(dataType);
-    [storage getStorageSizeForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([callingAPIName, completionHandler = WTFMove(completionHandler)](size_t size, NSString *errorMessage) mutable {
-        if (errorMessage)
+    Ref storage = storageForType(dataType);
+    storage->getStorageSizeForKeys(keys, [callingAPIName, completionHandler = WTFMove(completionHandler)](size_t size, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty())
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
         else
             completionHandler(size);
-    }).get()];
+    });
 }
 
 void WebExtensionContext::storageSet(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, const String& dataJSON, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".set()"_s);
 
-    NSDictionary *data = parseJSON(dataJSON);
+    HashMap<String, String> data = { };
+    if (RefPtr json = JSON::Value::parseJSON(dataJSON); json->asObject())
+        data = objectToMap<String>(*(json->asObject().get()));
 
-    [storageForType(dataType) getStorageSizeForAllKeysIncludingKeyedData:data withCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, retainData = RetainPtr { data }, completionHandler = WTFMove(completionHandler)](size_t size, NSUInteger numberOfKeys, NSDictionary<NSString *, NSString *> *existingKeysAndValues, NSString *errorMessage) mutable {
-        if (errorMessage) {
+    Ref storage = storageForType(dataType);
+    storage->getStorageSizeForAllKeys(data, [this, protectedThis = Ref { *this }, callingAPIName, dataType, data = WTFMove(data), completionHandler = WTFMove(completionHandler)](size_t size, int numberOfKeys, HashMap<String, String> existingKeysAndValues, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty()) {
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
         if (size > quotaForStorageType(dataType)) {
-            completionHandler(toWebExtensionError(callingAPIName, nullString(), @"exceeded storage quota"));
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), "exceeded storage quota"_s));
             return;
         }
 
-        if (dataType == WebExtensionDataType::Sync && numberOfKeys > webExtensionStorageAreaSyncMaximumItems) {
-            completionHandler(toWebExtensionError(callingAPIName, nullString(), @"exceeded maximum number of items"));
+        if (dataType == WebExtensionDataType::Sync && (size_t)numberOfKeys > webExtensionStorageAreaSyncMaximumItems) {
+            completionHandler(toWebExtensionError(callingAPIName, nullString(), "exceeded maximum number of items"_s));
             return;
         }
 
-        [storageForType(dataType) setKeyedData:retainData.get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, retainData, dataType, existingKeysAndValues = RetainPtr { existingKeysAndValues }, completionHandler = WTFMove(completionHandler)](NSArray *keysSuccessfullySet, NSString *errorMessage) mutable {
-            if (errorMessage)
+        Ref storage = storageForType(dataType);
+        storage->setKeyedData(data, [this, protectedThis = Ref { *this }, callingAPIName, data, dataType, existingKeysAndValues = WTFMove(existingKeysAndValues), completionHandler = WTFMove(completionHandler)](Vector<String> keysSuccessfullySet, const String& errorMessage) mutable {
+            if (!errorMessage.isEmpty())
                 completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             else
                 completionHandler({ });
 
             // Only fire an onChanged event for the keys that were successfully set.
-            if (!keysSuccessfullySet.count)
+            if (!keysSuccessfullySet.size())
                 return;
 
-            auto *data = retainData.get();
-            if (keysSuccessfullySet.count != data.allKeys.count)
-                data = dictionaryWithKeys(data, keysSuccessfullySet);
+            if (keysSuccessfullySet.size() != data.size()) {
+                for (auto i : data.keys()) {
+                    if (!keysSuccessfullySet.contains(i))
+                        data.remove(i);
+                }
+            }
 
-            fireStorageChangedEventIfNeeded(existingKeysAndValues.get(), data, dataType);
-        }).get()];
-    }).get()];
+            fireStorageChangedEventIfNeeded(existingKeysAndValues, data, dataType);
+        });
+    });
 }
 
 void WebExtensionContext::storageRemove(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, const Vector<String>& keys, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".remove()"_s);
 
-    [storageForType(dataType) getValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, keys, dataType, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *oldValuesAndKeys, NSString *errorMessage) mutable {
-        if (errorMessage) {
+    Ref storage = storageForType(dataType);
+    storage->getValuesForKeys(keys, [this, protectedThis = Ref { *this }, callingAPIName, keys, dataType, completionHandler = WTFMove(completionHandler)](HashMap<String, String> oldValuesAndKeys, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty()) {
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
-        [storageForType(dataType) deleteValuesForKeys:createNSArray(keys).get() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, oldValuesAndKeys = RetainPtr { oldValuesAndKeys }, completionHandler = WTFMove(completionHandler)](NSString *errorMessage) mutable {
-            if (errorMessage) {
+        Ref storage = storageForType(dataType);
+        storage->deleteValuesForKeys(keys, [this, protectedThis = Ref { *this }, callingAPIName, dataType, oldValuesAndKeys = WTFMove(oldValuesAndKeys), completionHandler = WTFMove(completionHandler)](const String& errorMessage) mutable {
+            if (!errorMessage.isEmpty()) {
                 completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
                 return;
             }
 
-            fireStorageChangedEventIfNeeded(oldValuesAndKeys.get(), nil, dataType);
+            fireStorageChangedEventIfNeeded(oldValuesAndKeys, { }, dataType);
 
             completionHandler({ });
-        }).get()];
-    }).get()];
+        });
+    });
 }
 
 void WebExtensionContext::storageClear(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
 {
     auto callingAPIName = makeString("browser.storage."_s, toAPIString(dataType), ".clear()"_s);
 
-    [storageForType(dataType) getValuesForKeys:@[ ] completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, dataType, completionHandler = WTFMove(completionHandler)](NSDictionary<NSString *, NSString *> *oldValuesAndKeys, NSString *errorMessage) mutable {
-        if (errorMessage) {
+    Ref storage = storageForType(dataType);
+    storage->getValuesForKeys({ }, [this, protectedThis = Ref { *this }, callingAPIName, dataType, completionHandler = WTFMove(completionHandler)](HashMap<String, String> oldValuesAndKeys, const String& errorMessage) mutable {
+        if (!errorMessage.isEmpty()) {
             completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
             return;
         }
 
-        [storageForType(dataType) deleteDatabaseWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callingAPIName, oldValuesAndKeys = RetainPtr { oldValuesAndKeys }, dataType, completionHandler = WTFMove(completionHandler)](NSString *errorMessage) mutable {
-            if (errorMessage) {
+        Ref storage = storageForType(dataType);
+        storage->deleteDatabase([this, protectedThis = Ref { *this }, callingAPIName, oldValuesAndKeys = WTFMove(oldValuesAndKeys), dataType, completionHandler = WTFMove(completionHandler)](const String& errorMessage) mutable {
+            if (!errorMessage.isEmpty()) {
                 completionHandler(toWebExtensionError(callingAPIName, nullString(), errorMessage));
                 return;
             }
 
-            fireStorageChangedEventIfNeeded(oldValuesAndKeys.get(), nil, dataType);
+            fireStorageChangedEventIfNeeded(oldValuesAndKeys, { }, dataType);
 
             completionHandler({ });
-        }).get()];
-    }).get()];
+        });
+    });
 }
 
 void WebExtensionContext::storageSetAccessLevel(WebPageProxyIdentifier webPageProxyIdentifier, WebExtensionDataType dataType, const WebExtensionStorageAccessLevel accessLevel, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&& completionHandler)
@@ -184,38 +191,51 @@ void WebExtensionContext::storageSetAccessLevel(WebPageProxyIdentifier webPagePr
     completionHandler({ });
 }
 
-void WebExtensionContext::fireStorageChangedEventIfNeeded(NSDictionary *oldKeysAndValues, NSDictionary *newKeysAndValues, WebExtensionDataType dataType)
+void WebExtensionContext::fireStorageChangedEventIfNeeded(HashMap<String, String> oldKeysAndValues, HashMap<String, String> newKeysAndValues, WebExtensionDataType dataType)
 {
-    static NSString * const newValueKey = @"newValue";
-    static NSString * const oldValueKey = @"oldValue";
+    static constexpr auto newValueKey = "newValue"_s;
+    static constexpr auto oldValueKey = "oldValue"_s;
 
-    if (!oldKeysAndValues.count && !newKeysAndValues.count)
+    if (!oldKeysAndValues.size() && !newKeysAndValues.size())
         return;
 
-    auto *changedData = [NSMutableDictionary dictionary];
+    RefPtr changedData = JSON::Object::create();
 
-    // Process new or changed keys.
-    [newKeysAndValues enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *newValue, BOOL *) {
-        NSString *oldValue = oldKeysAndValues[key];
+    // Process new or changed keys
+    for (auto mapData : newKeysAndValues) {
+        auto key = mapData.key;
+        auto value = mapData.value;
 
-        if (!oldValue || ![oldValue isEqualToString:newValue]) {
-            id parsedNewValue = parseJSON(newValue, JSONOptions::FragmentsAllowed) ?: NSNull.null;
-            id parsedOldValue = oldValue ? parseJSON(oldValue, JSONOptions::FragmentsAllowed) ?: NSNull.null : nil;
-            changedData[key] = parsedOldValue ? @{ oldValueKey: parsedOldValue, newValueKey: parsedNewValue } : @{ newValueKey: parsedNewValue };
+        String oldValue = oldKeysAndValues.get(key);
+
+        if (oldValue.isEmpty() || oldValue != value) {
+            RefPtr parsedNewValue = JSON::Value::parseJSON(value);
+            RefPtr parsedOldValue = JSON::Value::parseJSON(oldValue);
+            RefPtr data = JSON::Object::create();
+            if (parsedOldValue)
+                data->setValue(oldValueKey, *parsedOldValue);
+            data->setValue(newValueKey, *parsedNewValue);
+            changedData->setObject(key, *data);
         }
-    }];
+    }
 
     // Process removed keys.
-    [oldKeysAndValues enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *oldValue, BOOL *) {
-        if (!newKeysAndValues[key])
-            changedData[key] = @{ oldValueKey: parseJSON(oldValue, JSONOptions::FragmentsAllowed) ?: NSNull.null };
-    }];
+    for (auto mapData : oldKeysAndValues) {
+        auto key = mapData.key;
+        auto value = mapData.value;
 
-    if (!changedData.count)
+        if (!newKeysAndValues.contains(key)) {
+            RefPtr data = JSON::Object::create();
+            data->setValue(oldValueKey, *(JSON::Value::parseJSON(value)));
+            changedData->setObject(key, *data);
+        }
+    }
+
+    if (!changedData->size())
         return;
 
     constexpr auto type = WebExtensionEventListenerType::StorageOnChanged;
-    auto jsonString = String(encodeJSONString(changedData));
+    auto jsonString = changedData->toJSONString();
 
     // Unlike other extension events which are only dispatched to the web process that hosts all the extension-related web views (background page, popup, full page extension content),
     // content scripts are allowed to listen to storage.onChanged events.
