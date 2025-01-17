@@ -739,13 +739,13 @@ RefPtr<WebCore::Icon> WebExtensionAction::icon(WebCore::FloatSize idealSize)
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
         if (m_customIconVariants) {
             result = extensionContext()->extension().bestIconVariant(m_customIconVariants, WebCore::FloatSize(idealSize), [&](Ref<API::Error> error) {
-                extensionContext()->recordError(::WebKit::wrapper(error));
+                extensionContext()->recordError(error);
             });
         } else
 #endif // ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
         if (m_customIcons) {
             result = extensionContext()->extension().bestIcon(m_customIcons, WebCore::FloatSize(idealSize), [&](Ref<API::Error> error) {
-                extensionContext()->recordError(::WebKit::wrapper(error));
+                extensionContext()->recordError(error);
             });
         }
 

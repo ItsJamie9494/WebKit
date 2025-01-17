@@ -38,6 +38,7 @@
 #import "Logging.h"
 #import "SandboxUtilities.h"
 #import "WKFeature.h"
+#import "WKNSError.h"
 #import "WKPreferences.h"
 #import "WKPreferencesPrivate.h"
 #import "WKWebViewConfigurationPrivate.h"
@@ -284,7 +285,7 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
     if (!m_extensionContexts.add(extensionContext)) {
         RELEASE_LOG_ERROR(Extensions, "Extension context already loaded");
         if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::AlreadyLoaded);
+            *outError = ::WebKit::wrapper(extensionContext.createError(WebExtensionContext::Error::AlreadyLoaded)).get();
         return false;
     }
 
@@ -292,7 +293,7 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
         RELEASE_LOG_ERROR(Extensions, "Extension context already loaded with same base URL: %{private}@", (NSURL *)extensionContext.baseURL());
         m_extensionContexts.remove(extensionContext);
         if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::BaseURLAlreadyInUse);
+            *outError = ::WebKit::wrapper(extensionContext.createError(WebExtensionContext::Error::BaseURLAlreadyInUse)).get();
         return false;
     }
 
@@ -313,7 +314,10 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
     if (!!extensionDirectory && !FileSystem::makeAllDirectories(extensionDirectory))
         RELEASE_LOG_ERROR(Extensions, "Failed to create directory: %{private}@", (NSString *)extensionDirectory);
 
-    if (!extensionContext.load(*this, extensionDirectory, outError)) {
+    RefPtr<API::Error> error;
+    if (!extensionContext.load(*this, extensionDirectory, error)) {
+        *outError = ::WebKit::wrapper(error);
+
         m_extensionContexts.remove(extensionContext);
         m_extensionContextBaseURLMap.remove(extensionContext.baseURL().protocolHostAndPort());
 
@@ -338,7 +342,7 @@ bool WebExtensionController::unload(WebExtensionContext& extensionContext, NSErr
     if (!m_extensionContexts.remove(extensionContext)) {
         RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
         if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::NotLoaded);
+            *outError = ::WebKit::wrapper(extensionContext.createError(WebExtensionContext::Error::NotLoaded)).get();
         return false;
     }
 
@@ -351,8 +355,11 @@ bool WebExtensionController::unload(WebExtensionContext& extensionContext, NSErr
     for (Ref processPool : m_processPools)
         processPool->removeMessageReceiver(Messages::WebExtensionContext::messageReceiverName(), extensionContext.identifier());
 
-    if (!extensionContext.unload(outError))
+    RefPtr<API::Error> error;
+    if (!extensionContext.unload(error)) {
+        *outError = ::WebKit::wrapper(error);
         return false;
+    }
 
     return true;
 }

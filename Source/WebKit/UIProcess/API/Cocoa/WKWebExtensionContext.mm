@@ -37,6 +37,7 @@
 #import "WKWebExtensionMatchPatternInternal.h"
 #import "WKWebExtensionTab.h"
 #import "WKWebView.h"
+#import "WKNSError.h"
 #import "WebExtension.h"
 #import "WebExtensionAction.h"
 #import "WebExtensionCommand.h"
@@ -110,7 +111,9 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionContext, WebExtensionContext
 
 -(NSArray<NSError *> *)errors
 {
-    return Ref { *_webExtensionContext }->errors();
+    return createNSArray(Ref { *_webExtensionContext }->errors(), [](auto&& child) -> id {
+        return wrapper(child);
+    }).autorelease();
 }
 
 - (NSURL *)baseURL
@@ -541,7 +544,9 @@ static inline WebKit::WebExtensionContext::PermissionState toImpl(WKWebExtension
 
 - (void)loadBackgroundContentWithCompletionHandler:(void (^)(NSError *error))completionHandler
 {
-    Ref { *_webExtensionContext }->loadBackgroundContent(makeBlockPtr(completionHandler));
+    Ref { *_webExtensionContext }->loadBackgroundContent(makeBlockPtr(^(RefPtr<API::Error> error) {
+        completionHandler(wrapper(error));
+    }));
 }
 
 - (WKWebExtensionAction *)actionForTab:(id<WKWebExtensionTab>)tab
