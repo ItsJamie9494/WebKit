@@ -65,12 +65,12 @@ private:
     static bool parseTargetInjectionOptions(NSDictionary *, WebExtensionScriptInjectionParameters&, NSString **outExceptionString);
     static bool parseScriptInjectionOptions(NSDictionary *, WebExtensionScriptInjectionParameters&, NSString **outExceptionString);
     static bool parseRegisteredContentScripts(NSArray *, FirstTimeRegistration, Vector<WebExtensionRegisteredScriptParameters>&, NSString **outExceptionString);
-#endif
 };
+#endif
 
 NSArray *toWebAPI(const Vector<WebExtensionScriptInjectionResultParameters>&, bool returnExecutionResultOnly);
 NSDictionary *toWebAPI(const WebExtensionRegisteredScriptParameters&);
-NSString *toWebAPI(WebExtension::InjectionTime);
+String toWebAPI(WebExtension::InjectionTime);
 
 } // namespace WebKit
 

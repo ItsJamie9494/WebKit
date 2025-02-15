@@ -113,6 +113,14 @@ id toWebAPI(const std::optional<T>& result, UseNullValue useNull = UseNullValue:
     return toWebAPI(result.value());
 }
 
+inline NSDictionary *toWebAPI(const JSON::Object& object)
+{
+    String jsonString = object.toJSONString();
+    auto *jsonData = [(NSString *)jsonString dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *dictionary = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingAllowFragments error:nil];
+    return dictionary;
+}
+
 template<typename T>
 NSArray *toWebAPI(const Vector<T>& items)
 {
