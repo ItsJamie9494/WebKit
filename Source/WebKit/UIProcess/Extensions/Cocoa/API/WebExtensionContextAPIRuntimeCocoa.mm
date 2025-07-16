@@ -122,7 +122,8 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
 
 void WebExtensionContext::runtimeReload()
 {
-    reload();
+    RefPtr<API::Error> outError = nullptr;
+    reload(outError);
 }
 
 void WebExtensionContext::runtimeSendMessage(const String& extensionID, const String& messageJSON, const WebExtensionMessageSenderParameters& senderParameters, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)

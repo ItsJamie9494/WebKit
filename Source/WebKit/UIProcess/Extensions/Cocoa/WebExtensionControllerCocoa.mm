@@ -279,23 +279,20 @@ void WebExtensionController::removeStorage(RefPtr<WebExtensionStorageSQLiteStore
     });
 }
 
-bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError **outError)
+bool WebExtensionController::load(WebExtensionContext& extensionContext, RefPtr<API::Error>& outError)
 {
-    if (outError)
-        *outError = nil;
+    outError = nullptr;
 
     if (!m_extensionContexts.add(extensionContext)) {
         RELEASE_LOG_ERROR(Extensions, "Extension context already loaded");
-        if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::AlreadyLoaded);
+        outError = extensionContext.createError(WebExtensionContext::Error::AlreadyLoaded);
         return false;
     }
 
     if (!m_extensionContextBaseURLMap.add(extensionContext.baseURL().protocolHostAndPort(), extensionContext)) {
         RELEASE_LOG_ERROR(Extensions, "Extension context already loaded with same base URL: %{private}@", extensionContext.baseURL().createNSURL().get());
         m_extensionContexts.remove(extensionContext);
-        if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::BaseURLAlreadyInUse);
+        outError = extensionContext.createError(WebExtensionContext::Error::BaseURLAlreadyInUse);
         return false;
     }
 
@@ -335,17 +332,15 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
     return true;
 }
 
-bool WebExtensionController::unload(WebExtensionContext& extensionContext, NSError **outError)
+bool WebExtensionController::unload(WebExtensionContext& extensionContext, RefPtr<API::Error>& outError)
 {
-    if (outError)
-        *outError = nil;
+    outError = nullptr;
 
     Ref protectedExtensionContext = extensionContext;
 
     if (!m_extensionContexts.remove(extensionContext)) {
         RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
-        if (outError)
-            *outError = extensionContext.createError(WebExtensionContext::Error::NotLoaded);
+        outError = extensionContext.createError(WebExtensionContext::Error::NotLoaded);
         return false;
     }
 
@@ -369,8 +364,9 @@ bool WebExtensionController::unload(WebExtensionContext& extensionContext, NSErr
 void WebExtensionController::unloadAll()
 {
     auto contextsCopy = m_extensionContexts;
+    RefPtr<API::Error> error = nullptr;
     for (Ref context : contextsCopy)
-        unload(context, nullptr);
+        unload(context, error);
 }
 
 void WebExtensionController::addPage(WebPageProxy& page)

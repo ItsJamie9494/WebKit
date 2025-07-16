@@ -50,7 +50,6 @@
 #include <wtf/URLHash.h>
 #include <wtf/WeakHashSet.h>
 
-OBJC_CLASS NSError;
 OBJC_CLASS NSMenu;
 OBJC_CLASS _WKWebExtensionControllerHelper;
 OBJC_PROTOCOL(WKWebExtensionControllerDelegatePrivate);
@@ -128,8 +127,8 @@ public:
     bool hasLoadedContexts() const { return !m_extensionContexts.isEmpty(); }
     bool isFreshlyCreated() const { return m_freshlyCreated; }
 
-    bool load(WebExtensionContext&, NSError ** = nullptr);
-    bool unload(WebExtensionContext&, NSError ** = nullptr);
+    bool load(WebExtensionContext&, RefPtr<API::Error>&);
+    bool unload(WebExtensionContext&, RefPtr<API::Error>&);
 
     void unloadAll();
 
