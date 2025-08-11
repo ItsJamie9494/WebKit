@@ -171,7 +171,7 @@ static constexpr NSInteger currentDeclarativeNetRequestRuleTranslatorVersion = 5
     if (!extensionContext)
         return;
 
-    extensionContext->didFailNavigation(webView, navigation, error);
+    extensionContext->didFailNavigation(webView, navigation, API::Error::create(error));
 }
 
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView
@@ -211,81 +211,17 @@ WebExtensionContext::WebExtensionContext(Ref<WebExtension>&& extension)
     m_tabDelegateToIdentifierMap = [NSMapTable weakToStrongObjectsMapTable];
 }
 
-static WKWebExtensionContextError toAPI(WebExtensionContext::Error error)
+void WebExtensionContext::recordError(Ref<API::Error> error)
 {
-    switch (error) {
-    case WebExtensionContext::Error::Unknown:
-        return WKWebExtensionContextErrorUnknown;
-    case WebExtensionContext::Error::AlreadyLoaded:
-        return WKWebExtensionContextErrorAlreadyLoaded;
-    case WebExtensionContext::Error::NotLoaded:
-        return WKWebExtensionContextErrorNotLoaded;
-    case WebExtensionContext::Error::BaseURLAlreadyInUse:
-        return WKWebExtensionContextErrorBaseURLAlreadyInUse;
-    case WebExtensionContext::Error::NoBackgroundContent:
-        return WKWebExtensionContextErrorNoBackgroundContent;
-    case WebExtensionContext::Error::BackgroundContentFailedToLoad:
-        return WKWebExtensionContextErrorBackgroundContentFailedToLoad;
-    }
-}
-
-NSError *WebExtensionContext::createError(Error error, NSString *customLocalizedDescription, NSError *underlyingError)
-{
-    auto errorCode = toAPI(error);
-    RetainPtr<NSString> localizedDescription;
-
-    switch (error) {
-    case Error::Unknown:
-        localizedDescription = WEB_UI_STRING_KEY("An unknown error has occurred.", "An unknown error has occurred. (WKWebExtensionContext)", "WKWebExtensionContextErrorUnknown description").createNSString();
-        break;
-
-    case Error::AlreadyLoaded:
-        localizedDescription = WEB_UI_STRING("Extension context is already loaded.", "WKWebExtensionContextErrorAlreadyLoaded description").createNSString();
-        break;
-
-    case Error::NotLoaded:
-        localizedDescription = WEB_UI_STRING("Extension context is not loaded.", "WKWebExtensionContextErrorNotLoaded description").createNSString();
-        break;
-
-    case Error::BaseURLAlreadyInUse:
-        localizedDescription = WEB_UI_STRING("Another extension context is loaded with the same base URL.", "WKWebExtensionContextErrorBaseURLAlreadyInUse description").createNSString();
-        break;
-
-    case Error::NoBackgroundContent:
-        localizedDescription = WEB_UI_STRING("No background content is available to load.", "WKWebExtensionContextErrorNoBackgroundContent description").createNSString();
-        break;
-
-    case Error::BackgroundContentFailedToLoad:
-        localizedDescription = WEB_UI_STRING("The background content failed to load due to an error.", "WKWebExtensionContextErrorBackgroundContentFailedToLoad description").createNSString();
-        break;
-    }
-
-    if (customLocalizedDescription.length)
-        localizedDescription = customLocalizedDescription;
-
-    NSDictionary *userInfo = @{ NSLocalizedDescriptionKey: localizedDescription.get() };
-    if (underlyingError)
-        userInfo = @{ NSLocalizedDescriptionKey: localizedDescription.get(), NSUnderlyingErrorKey: underlyingError };
-
-    return [[NSError alloc] initWithDomain:WKWebExtensionContextErrorDomain code:errorCode userInfo:userInfo];
-}
-
-void WebExtensionContext::recordError(NSError *error)
-{
-    ASSERT(error);
-
-    if (!m_errors)
-        m_errors = [NSMutableArray array];
-
-    RELEASE_LOG_ERROR(Extensions, "Error recorded: %{public}@", privacyPreservingDescription(error));
+    RELEASE_LOG_ERROR(Extensions, "Error recorded: %{public}@", privacyPreservingDescription(error->platformError()));
 
     // Only the first occurrence of each error is recorded in the array. This prevents duplicate errors,
     // such as repeated "resource not found" errors, from being included multiple times.
-    if ([m_errors containsObject:error])
+    if (m_errors.containsIf([&](auto& existingError) { return existingError->localizedDescription() == error->localizedDescription(); }))
         return;
 
     [wrapper() willChangeValueForKey:@"errors"];
-    [m_errors addObject:error];
+    m_errors.append(error);
     [wrapper() didChangeValueForKey:@"errors"];
 
     dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
@@ -295,19 +231,16 @@ void WebExtensionContext::recordError(NSError *error)
 
 void WebExtensionContext::clearError(Error error)
 {
-    if (!m_errors.get().count)
+    if (!m_errors.size())
         return;
 
-    auto errorCode = toAPI(error);
-    auto *indexes = [m_errors indexesOfObjectsPassingTest:^BOOL(NSError *error, NSUInteger, BOOL *) {
-        return error.code == errorCode;
-    }];
-
-    if (!indexes.count)
-        return;
-
+    auto errorCode = errorToAPI(error);
     [wrapper() willChangeValueForKey:@"errors"];
-    [m_errors removeObjectsAtIndexes:indexes];
+    m_errors.removeAllMatching([&](auto& error) {
+        if (error->errorCode() == errorCode)
+            return true;
+        return false;
+    });
     [wrapper() didChangeValueForKey:@"errors"];
 
     dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
@@ -315,23 +248,13 @@ void WebExtensionContext::clearError(Error error)
     }).get());
 }
 
-NSArray *WebExtensionContext::errors()
+bool WebExtensionContext::load(WebExtensionController& controller, String storageDirectory, RefPtr<API::Error>& outError)
 {
-    auto array = createNSArray(protectedExtension()->errors(), [](Ref<API::Error> error) {
-        return ::WebKit::wrapper(error);
-    });
-    return [array.get() arrayByAddingObjectsFromArray:m_errors.get()];
-}
-
-bool WebExtensionContext::load(WebExtensionController& controller, String storageDirectory, NSError **outError)
-{
-    if (outError)
-        *outError = nil;
+    outError = nullptr;
 
     if (isLoaded()) {
         RELEASE_LOG_ERROR(Extensions, "Extension context already loaded");
-        if (outError)
-            *outError = createError(Error::AlreadyLoaded);
+        outError = createError(Error::AlreadyLoaded);
         return false;
     }
 
@@ -339,8 +262,7 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
     RefPtr extension = m_extension;
     if (extension->backgroundContentIsPersistent()) {
         RELEASE_LOG_ERROR(Extensions, "Cannot load persistent background content on this platform");
-        if (outError)
-            *outError = ::WebKit::wrapper(extension->createError(WebExtension::Error::InvalidBackgroundPersistence)).get();
+        outError = extension->createError(WebExtension::Error::InvalidBackgroundPersistence);
         return false;
     }
 #endif
@@ -389,15 +311,13 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
     return true;
 }
 
-bool WebExtensionContext::unload(NSError **outError)
+bool WebExtensionContext::unload(RefPtr<API::Error>& outError)
 {
-    if (outError)
-        *outError = nil;
+    outError = nullptr;
 
     if (!isLoaded()) {
         RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
-        if (outError)
-            *outError = createError(Error::NotLoaded);
+        outError = createError(Error::NotLoaded);
         return false;
     }
 
@@ -466,15 +386,13 @@ bool WebExtensionContext::unload(NSError **outError)
     return true;
 }
 
-bool WebExtensionContext::reload(NSError **outError)
+bool WebExtensionContext::reload(RefPtr<API::Error>& outError)
 {
-    if (outError)
-        *outError = nil;
+    outError = nullptr;
 
     if (!isLoaded()) {
         RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
-        if (outError)
-            *outError = createError(Error::NotLoaded);
+        outError = createError(Error::NotLoaded);
         return false;
     }
 
@@ -3550,7 +3468,7 @@ URL WebExtensionContext::backgroundContentURL()
     return { m_baseURL, extension->backgroundContentPath() };
 }
 
-void WebExtensionContext::loadBackgroundContent(CompletionHandler<void(NSError *)>&& completionHandler)
+void WebExtensionContext::loadBackgroundContent(CompletionHandler<void(RefPtr<API::Error>)>&& completionHandler)
 {
     if (!protectedExtension()->hasBackgroundContent()) {
         if (completionHandler)
@@ -3647,7 +3565,7 @@ void WebExtensionContext::loadBackgroundWebView()
 
     m_backgroundWebView.get()._remoteInspectionNameOverride = backgroundWebViewInspectionName();
     clearError(Error::BackgroundContentFailedToLoad);
-    m_backgroundContentLoadError = nil;
+    m_backgroundContentLoadError = nullptr;
 
     Ref backgroundPage = *m_backgroundWebView.get()._page;
     Ref backgroundProcess = backgroundPage->siteIsolatedProcess();
@@ -3665,7 +3583,7 @@ void WebExtensionContext::loadBackgroundWebView()
     [m_backgroundWebView _loadServiceWorker:backgroundContentURL().createNSURL().get() usingModules:protectedExtension()->backgroundContentUsesModules() completionHandler:makeBlockPtr([this, protectedThis = Ref { *this }](BOOL success) {
         if (!success) {
             m_backgroundContentLoadError = createError(Error::BackgroundContentFailedToLoad);
-            recordError(backgroundContentLoadError());
+            recordError(*backgroundContentLoadError());
             return;
         }
 
@@ -3975,13 +3893,13 @@ void WebExtensionContext::didFinishDocumentLoad(WKWebView *webView, WKNavigation
     performTasksAfterBackgroundContentLoads();
 }
 
-void WebExtensionContext::didFailNavigation(WKWebView *webView, WKNavigation *, NSError *error)
+void WebExtensionContext::didFailNavigation(WKWebView *webView, WKNavigation *, RefPtr<API::Error> error)
 {
     if (webView != m_backgroundWebView)
         return;
 
-    m_backgroundContentLoadError = createError(Error::BackgroundContentFailedToLoad, nil, error);
-    recordError(backgroundContentLoadError());
+    m_backgroundContentLoadError = createError(Error::BackgroundContentFailedToLoad, nullString(), error);
+    recordError(*backgroundContentLoadError());
 
     unloadBackgroundWebView();
 }
@@ -4553,7 +4471,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             RefPtr<API::Error> error;
             auto scriptString = extension->resourceStringForPath(scriptPath, error, WebExtension::CacheResult::Yes);
             if (!scriptString) {
-                recordErrorIfNeeded(::WebKit::wrapper(error));
+                recordErrorIfNeeded(error);
                 continue;
             }
 
@@ -4577,7 +4495,7 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
             RefPtr<API::Error> error;
             auto styleSheetString = extension->resourceStringForPath(styleSheetPath, error, WebExtension::CacheResult::Yes);
             if (!styleSheetString) {
-                recordErrorIfNeeded(::WebKit::wrapper(error));
+                recordErrorIfNeeded(error);
                 continue;
             }
 
@@ -4851,7 +4769,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
             RefPtr<API::Error> error;
             RefPtr jsonData = extension->resourceDataForPath(ruleset.jsonPath, error);
             if (!jsonData || error) {
-                recordErrorIfNeeded(::WebKit::wrapper(*error));
+                recordErrorIfNeeded(error);
                 continue;
             }
 
