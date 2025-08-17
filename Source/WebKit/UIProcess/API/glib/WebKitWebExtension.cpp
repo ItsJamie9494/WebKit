@@ -434,6 +434,11 @@ WebKitWebExtension* webkitWebExtensionCreate(HashMap<String, GRefPtr<GBytes>>&& 
     return object;
 }
 
+RefPtr<WebKit::WebExtension> webkitWebExtensionGetInternalExtension(WebKitWebExtension* extension)
+{
+    return extension->priv->extension;
+}
+
 /**
  * webkit_web_extension_get_manifest_version:
  * @extension: a #WebKitWebExtension

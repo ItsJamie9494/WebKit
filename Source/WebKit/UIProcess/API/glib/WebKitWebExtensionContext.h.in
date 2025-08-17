@@ -26,6 +26,8 @@
 #include <gio/gio.h>
 #include <@API_INCLUDE_PREFIX@/WebKitDefines.h>
 
+#include "WebKitWebExtension.h"
+
 G_BEGIN_DECLS
 
 #define WEBKIT_TYPE_WEB_EXTENSION_CONTEXT           (webkit_web_extension_context_get_type())
@@ -33,9 +35,11 @@ G_BEGIN_DECLS
 WEBKIT_DECLARE_FINAL_TYPE (WebKitWebExtensionContext, webkit_web_extension_context, WEBKIT, WEB_EXTENSION_CONTEXT, GObject)
 
 WEBKIT_API WebKitWebExtensionContext *
-webkit_web_extension_context_new_for_web_extension  (WebKitWebExtensionContext *context);
+webkit_web_extension_context_new_for_web_extension  (WebKitWebExtensionContext *context,
+                                                     WebKitWebExtension        *extension);
 
-
+WEBKIT_API WebKitWebExtension *
+webkit_web_extension_context_get_web_extension      (WebKitWebExtensionContext *context);
 
 G_END_DECLS
 

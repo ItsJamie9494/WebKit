@@ -45,6 +45,7 @@ G_BEGIN_DECLS
 
 #if ENABLE(2022_GLIB_API)
 #define WEBKIT_MEDIA_ERROR                       webkit_media_error_quark ()
+#define WEBKIT_WEB_EXTENSION_CONTEXT_ERROR       webkit_web_extension_context_error_quark ()
 #endif
 
 /**
@@ -187,6 +188,30 @@ typedef enum {
     WEBKIT_WEB_EXTENSION_ERROR_INVALID_ARCHIVE = 807,
 } WebKitWebExtensionError;
 
+#if ENABLE(2022_GLIB_API)
+/**
+ * WebKitWebExtensionContextError:
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_UNKNOWN: An unknown error occured.
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_ALREADY_LOADED: The context is already loaded by a controller.
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_NOT_LOADED: The context is not loaded by a controller.
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_BASE_URL_ALREADY_IN_USE: Another context is already using the specified base URL.
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_NO_BACKGROUND_CONTENT: The extension does not have background content.
+ * @WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_BACKGROUND_CONTENT_FAILED_TO_LOAD: AN error occured when loading the background content.
+ *
+ * Enum values used to denote errors happening when loading a #WebKitWebExtensionContext
+ * 
+ * Since: 2.52
+ */
+typedef enum {
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_UNKNOWN = 899,
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_ALREADY_LOADED = 800,
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_NOT_LOADED = 801,
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_BASE_URL_ALREADY_IN_USE = 802,
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_NO_BACKGROUND_CONTENT = 803,
+    WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_BACKGROUND_CONTENT_FAILED_TO_LOAD = 804
+} WebKitWebExtensionContextError;
+#endif
+
 /**
  * WebKitWebExtensionMatchPatternError:
  * @WEBKIT_WEB_EXTENSION_MATCH_PATTERN_ERROR_UNKNOWN: An unknown error occured.
@@ -260,6 +285,11 @@ webkit_snapshot_error_quark                    (void);
 
 WEBKIT_API GQuark
 webkit_web_extension_error_quark               (void);
+
+#if ENABLE(2022_GLIB_API)
+WEBKIT_API GQuark
+webkit_web_extension_context_error_quark       (void);
+#endif
 
 WEBKIT_API GQuark
 webkit_web_extension_match_pattern_error_quark (void);
