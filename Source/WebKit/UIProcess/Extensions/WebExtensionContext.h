@@ -164,7 +164,13 @@ public:
     void ref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::ref(); }
     void deref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::deref(); }
 
-    static String plistFileName() { return "State.plist"_s; };
+    static String stateFileName() {
+#if PLATFORM(COCOA)
+        return "State.plist"_s;
+#else
+        return "State.ini"_s;
+#endif
+    };
     static NSMutableDictionary *readStateFromPath(const String&);
     static bool readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL);
     static bool readDisplayNameFromState(const String& filePath, String& outDisplayName);

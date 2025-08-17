@@ -107,6 +107,13 @@ Vector<Ref<API::Error>> WebExtensionContext::errors()
     return array;
 }
 
+String WebExtensionContext::stateFilePath() const
+{
+    if (!storageIsPersistent())
+        return nullString();
+    return FileSystem::pathByAppendingComponent(storageDirectory(), stateFileName());
+}
+
 static HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContext>>& webExtensionContexts()
 {
     static NeverDestroyed<HashMap<WebExtensionContextIdentifier, WeakRef<WebExtensionContext>>> contexts;

@@ -405,13 +405,6 @@ Expected<bool, RefPtr<API::Error>> WebExtensionContext::reload()
     return true;
 }
 
-String WebExtensionContext::stateFilePath() const
-{
-    if (!storageIsPersistent())
-        return nullString();
-    return FileSystem::pathByAppendingComponent(storageDirectory(), plistFileName());
-}
-
 NSDictionary *WebExtensionContext::currentState() const
 {
     return [m_state copy];
