@@ -140,6 +140,22 @@ GQuark webkit_web_extension_match_pattern_error_quark()
     return g_quark_from_static_string("WebKitWebExtensionMatchPatternError");
 }
 
+#if ENABLE(2022_GLIB_API)
+/**
+ * webkit_web_extension_context_error_quark:
+ *
+ * Gets the quark for the domain of Web Extension Context errors.
+ *
+ * Returns: web extension context error domain.
+ * 
+ * Since: 2.52
+ */
+GQuark webkit_web_extension_context_error_quark()
+{
+    return g_quark_from_static_string("WebKitWebExtensionContextError");
+}
+#endif
+
 /**
  * webkit_user_content_filter_error_quark:
  *

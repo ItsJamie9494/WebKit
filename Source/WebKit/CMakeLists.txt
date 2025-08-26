@@ -283,7 +283,6 @@ set(WebKit_MESSAGES_IN_FILES
 
     UIProcess/DrawingAreaProxy
 
-    UIProcess/Extensions/WebExtensionContext
     UIProcess/Extensions/WebExtensionController
 
     UIProcess/Media/RemoteMediaSessionCoordinatorProxy

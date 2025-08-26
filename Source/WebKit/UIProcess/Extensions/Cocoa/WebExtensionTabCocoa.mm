@@ -243,10 +243,11 @@ bool WebExtensionTab::matches(const WebExtensionTabQueryParameters& parameters, 
     return true;
 }
 
-bool WebExtensionTab::extensionHasAccess() const
+bool WebExtensionTab::extensionHasTemporaryPermission() const
 {
-    bool isPrivate = this->isPrivate();
-    return !isPrivate || (isPrivate && extensionContext()->hasAccessToPrivateData());
+    ASSERT(extensionHasAccess());
+    RefPtr temporaryPattern = temporaryPermissionMatchPattern();
+    return temporaryPattern && temporaryPattern->matchesURL(url());
 }
 
 bool WebExtensionTab::extensionHasPermission() const
@@ -261,13 +262,6 @@ bool WebExtensionTab::extensionHasPermission() const
         return true;
 
     return extensionContext->hasPermission(url(), const_cast<WebExtensionTab*>(this));
-}
-
-bool WebExtensionTab::extensionHasTemporaryPermission() const
-{
-    ASSERT(extensionHasAccess());
-    RefPtr temporaryPattern = temporaryPermissionMatchPattern();
-    return temporaryPattern && temporaryPattern->matchesURL(url());
 }
 
 RefPtr<WebExtensionWindow> WebExtensionTab::window() const

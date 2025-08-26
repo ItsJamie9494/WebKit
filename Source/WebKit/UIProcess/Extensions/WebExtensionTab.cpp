@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,14 +17,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#pragma once
+#include "config.h"
+#include "WebExtensionTab.h"
 
-#include "WebExtensionMatchPattern.h"
-#include "WebKitWebExtensionMatchPattern.h"
-#include <wtf/RefPtr.h>
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-typedef struct _WebKitWebExtensionMatchPattern WebKitWebExtensionMatchPattern;
+namespace WebKit {
 
-WebKitWebExtensionMatchPattern* webkitWebExtensionMatchPatternCreate(Ref<WebKit::WebExtensionMatchPattern>&);
-WebKitWebExtensionMatchPattern* webkitWebExtensionMatchPatternCreate(const RefPtr<WebKit::WebExtensionMatchPattern>&);
-RefPtr<WebKit::WebExtensionMatchPattern> webkitWebExtensionMatchPatternToImpl(WebKitWebExtensionMatchPattern*);
+} // namespace WebKit
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

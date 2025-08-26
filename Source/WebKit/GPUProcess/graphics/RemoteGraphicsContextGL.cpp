@@ -41,6 +41,7 @@
 #include <WebCore/NotImplemented.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(VIDEO)
 #include "RemoteVideoFrameObjectHeap.h"
@@ -80,6 +81,8 @@ Ref<RemoteGraphicsContextGL> RemoteGraphicsContextGL::create(GPUConnectionToWebP
     return instance;
 }
 #endif
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteGraphicsContextGL);
 
 RemoteGraphicsContextGL::RemoteGraphicsContextGL(GPUConnectionToWebProcess& gpuConnectionToWebProcess, GraphicsContextGLIdentifier identifier, RemoteRenderingBackend& renderingBackend, Ref<IPC::StreamServerConnection>&& streamConnection)
     : m_gpuConnectionToWebProcess(gpuConnectionToWebProcess)

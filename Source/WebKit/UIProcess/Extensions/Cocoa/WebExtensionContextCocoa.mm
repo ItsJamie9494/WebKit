@@ -105,9 +105,6 @@
 #import <WebCore/ContentRuleListMatchedRule.h>
 #endif
 
-// This number was chosen arbitrarily based on testing with some popular extensions.
-static constexpr size_t maximumCachedPermissionResults = 256;
-
 static constexpr auto permissionRequestTimeout = 2_min;
 
 static NSString * const backgroundContentEventListenersKey = @"BackgroundContentEventListeners";
@@ -499,76 +496,6 @@ void WebExtensionContext::invalidateStorage()
     m_syncStorageStore = nullptr;
 }
 
-void WebExtensionContext::setBaseURL(URL&& url)
-{
-    ASSERT(!isLoaded());
-    if (isLoaded())
-        return;
-
-    if (!url.isValid())
-        return;
-
-    m_baseURL = URL { makeString(url.protocol(), "://"_s, url.host(), '/') };
-}
-
-bool WebExtensionContext::isURLForThisExtension(const URL& url) const
-{
-    return url.isValid() && protocolHostAndPortAreEqual(baseURL(), url);
-}
-
-bool WebExtensionContext::isURLForAnyExtension(const URL& url)
-{
-    return url.isValid() && WebExtensionMatchPattern::extensionSchemes().contains(url.protocol().toString());
-}
-
-void WebExtensionContext::setUniqueIdentifier(String&& uniqueIdentifier)
-{
-    ASSERT(!isLoaded());
-    if (isLoaded())
-        return;
-
-    m_customUniqueIdentifier = !uniqueIdentifier.isEmpty();
-
-    if (uniqueIdentifier.isEmpty())
-        uniqueIdentifier = WTF::UUID::createVersion4().toString();
-
-    m_uniqueIdentifier = uniqueIdentifier;
-}
-
-RefPtr<WebExtensionLocalization> WebExtensionContext::localization()
-{
-    if (!m_localization)
-        m_localization = WebExtensionLocalization::create(protectedExtension()->localization()->localizationJSON(), baseURL().host().toString());
-    return m_localization;
-}
-
-RefPtr<API::Data> WebExtensionContext::localizedResourceData(const RefPtr<API::Data>& resourceData, const String& mimeType)
-{
-    if (!equalLettersIgnoringASCIICase(mimeType, "text/css"_s) || !resourceData)
-        return resourceData;
-
-    RefPtr decoder = WebCore::TextResourceDecoder::create(mimeType, PAL::UTF8Encoding());
-    auto stylesheetContents = decoder->decode(resourceData->span());
-
-    auto localizedString = localizedResourceString(stylesheetContents, mimeType);
-    if (localizedString == stylesheetContents)
-        return resourceData;
-
-    return API::Data::create(localizedString.utf8().span());
-}
-
-String WebExtensionContext::localizedResourceString(const String& resourceContents, const String& mimeType)
-{
-    if (!equalLettersIgnoringASCIICase(mimeType, "text/css"_s) || resourceContents.isEmpty() || !resourceContents.contains("__MSG_"_s))
-        return resourceContents;
-
-    RefPtr localization = this->localization();
-    if (!localization)
-        return resourceContents;
-
-    return localization->localizedStringForString(resourceContents);
-}
-
 void WebExtensionContext::setInspectable(bool inspectable)
 {
     m_inspectable = inspectable;
@@ -583,102 +510,6 @@ void WebExtensionContext::setInspectable(bool inspectable)
     for (auto entry : m_popupPageActionMap) {
         Ref page = entry.key;
         page->cocoaView().get().inspectable = inspectable;
-    }
-}
-
-void WebExtensionContext::setUnsupportedAPIs(HashSet<String>&& unsupported)
-{
-    ASSERT(!isLoaded());
-    if (isLoaded())
-        return;
-
-    m_unsupportedAPIs = WTFMove(unsupported);
-}
-
-WebExtensionContext::InjectedContentVector WebExtensionContext::injectedContents() const
-{
-    InjectedContentVector result = protectedExtension()->staticInjectedContents();
-
-    for (auto& entry : m_registeredScriptsMap)
-        result.append(entry.value->injectedContent());
-
-    return result;
-}
-
-bool WebExtensionContext::hasInjectedContentForURL(const URL& url)
-{
-    for (auto& injectedContent : injectedContents()) {
-        // FIXME: <https://webkit.org/b/246492> Add support for exclude globs.
-        bool isExcluded = false;
-        for (auto& excludeMatchPattern : injectedContent.excludeMatchPatterns) {
-            if (excludeMatchPattern->matchesURL(url)) {
-                isExcluded = true;
-                break;
-            }
-        }
-
-        if (isExcluded)
-            continue;
-
-        // FIXME: <https://webkit.org/b/246492> Add support for include globs.
-        for (auto& includeMatchPattern : injectedContent.includeMatchPatterns) {
-            if (includeMatchPattern->matchesURL(url))
-                return true;
-        }
-    }
-
-    return false;
-}
-
-bool WebExtensionContext::hasInjectedContent()
-{
-    return !injectedContents().isEmpty();
-}
-
-URL WebExtensionContext::optionsPageURL() const
-{
-    RefPtr extension = m_extension;
-    if (!extension->hasOptionsPage())
-        return { };
-    return { m_baseURL, extension->optionsPagePath() };
-}
-
-URL WebExtensionContext::overrideNewTabPageURL() const
-{
-    RefPtr extension = m_extension;
-    if (!extension->hasOverrideNewTabPage())
-        return { };
-    return { m_baseURL, extension->overrideNewTabPagePath() };
-}
-
-void WebExtensionContext::setHasAccessToPrivateData(bool hasAccess)
-{
-    if (m_hasAccessToPrivateData == hasAccess)
-        return;
-
-    m_hasAccessToPrivateData = hasAccess;
-
-    if (!safeToInjectContent())
-        return;
-
-    if (m_hasAccessToPrivateData) {
-        addDeclarativeNetRequestRulesToPrivateUserContentControllers();
-
-        for (Ref controller : extensionController()->allPrivateUserContentControllers())
-            addInjectedContent(controller);
-
-#if ENABLE(INSPECTOR_EXTENSIONS)
-        loadInspectorBackgroundPagesForPrivateBrowsing();
-#endif
-    } else {
-        for (Ref controller : extensionController()->allPrivateUserContentControllers()) {
-            removeInjectedContent(controller);
-            controller->removeContentRuleList(uniqueIdentifier());
-        }
-
-#if ENABLE(INSPECTOR_EXTENSIONS)
-        unloadInspectorBackgroundPagesForPrivateBrowsing();
-#endif
     }
 }
 
@@ -815,10 +646,12 @@ void WebExtensionContext::setDeniedPermissionMatchPatterns(PermissionMatchPatter
     permissionsDidChange(WKWebExtensionContextPermissionMatchPatternsWereDeniedNotification, addedMatchPatterns);
 }
 
-void WebExtensionContext::permissionsDidChange(NSNotificationName notificationName, const PermissionsSet& permissions)
+void WebExtensionContext::permissionsDidChange(const String& notificationName, const PermissionsSet& permissions)
 {
     if (permissions.isEmpty())
         return;
+
+    NSNotificationName notification = notificationName.createNSString().autorelease();
 
     if (isLoaded()) {
         RefPtr extensionController = this->extensionController();
@@ -835,31 +668,33 @@ void WebExtensionContext::permissionsDidChange(NSNotificationName notificationNa
             });
         }
 
-        if ([notificationName isEqualToString:WKWebExtensionContextPermissionsWereGrantedNotification])
+        if ([notification isEqualToString:WKWebExtensionContextPermissionsWereGrantedNotification])
             firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnAdded, permissions, { });
-        else if ([notificationName isEqualToString:WKWebExtensionContextGrantedPermissionsWereRemovedNotification])
+        else if ([notification isEqualToString:WKWebExtensionContextGrantedPermissionsWereRemovedNotification])
             firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnRemoved, permissions, { });
     }
 
-    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, notificationName = retainPtr(notificationName), permissions] {
-        [NSNotificationCenter.defaultCenter postNotificationName:notificationName.get() object:wrapper() userInfo:@{ WKWebExtensionContextNotificationUserInfoKeyPermissions: toAPI(permissions) }];
+    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, notification = retainPtr(notification), permissions] {
+        [NSNotificationCenter.defaultCenter postNotificationName:notification.get() object:wrapper() userInfo:@{ WKWebExtensionContextNotificationUserInfoKeyPermissions: toAPI(permissions) }];
     }).get());
 }
 
-void WebExtensionContext::permissionsDidChange(NSNotificationName notificationName, const MatchPatternSet& matchPatterns)
+void WebExtensionContext::permissionsDidChange(const String& notificationName, const MatchPatternSet& matchPatterns)
 {
     if (matchPatterns.isEmpty())
         return;
 
     clearCachedPermissionStates();
 
+    NSNotificationName notification = notificationName.createNSString().autorelease();
+
     if (isLoaded()) {
         updateCORSDisablingPatternsOnAllExtensionPages();
 
-        if ([notificationName isEqualToString:WKWebExtensionContextPermissionMatchPatternsWereGrantedNotification]) {
+        if ([notification isEqualToString:WKWebExtensionContextPermissionMatchPatternsWereGrantedNotification]) {
             addInjectedContent(injectedContents(), matchPatterns);
             firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnAdded, { }, matchPatterns);
-        } else if ([notificationName isEqualToString:WKWebExtensionContextGrantedPermissionMatchPatternsWereRemovedNotification]) {
+        } else if ([notification isEqualToString:WKWebExtensionContextGrantedPermissionMatchPatternsWereRemovedNotification]) {
             removeInjectedContent(matchPatterns);
             firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnRemoved, { }, matchPatterns);
         } else
@@ -875,8 +710,8 @@ void WebExtensionContext::permissionsDidChange(NSNotificationName notificationNa
         }
     }
 
-    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, notificationName = retainPtr(notificationName), matchPatterns] {
-        [NSNotificationCenter.defaultCenter postNotificationName:notificationName.get() object:wrapper() userInfo:@{ WKWebExtensionContextNotificationUserInfoKeyMatchPatterns: toAPI(matchPatterns) }];
+    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, notification = retainPtr(notification), matchPatterns] {
+        [NSNotificationCenter.defaultCenter postNotificationName:notification.get() object:wrapper() userInfo:@{ WKWebExtensionContextNotificationUserInfoKeyMatchPatterns: toAPI(matchPatterns) }];
     }).get());
 }
 
@@ -974,119 +809,6 @@ void WebExtensionContext::denyPermissionMatchPatterns(MatchPatternSet&& permissi
     removeGrantedPermissionMatchPatterns(addedMatchPatterns, equalityOnly);
 
     permissionsDidChange(WKWebExtensionContextPermissionMatchPatternsWereDeniedNotification, addedMatchPatterns);
-}
-
-bool WebExtensionContext::removeGrantedPermissions(PermissionsSet& permissionsToRemove)
-{
-    return removePermissions(m_grantedPermissions, permissionsToRemove, m_nextGrantedPermissionsExpirationDate, WKWebExtensionContextGrantedPermissionsWereRemovedNotification);
-}
-
-bool WebExtensionContext::removeGrantedPermissionMatchPatterns(MatchPatternSet& matchPatternsToRemove, EqualityOnly equalityOnly)
-{
-    // Clear activeTab permissions if the patterns match.
-    for (Ref tab : openTabs()) {
-        auto temporaryPattern = tab->temporaryPermissionMatchPattern();
-        if (!temporaryPattern)
-            continue;
-
-        for (auto& pattern : matchPatternsToRemove) {
-            if (temporaryPattern->matchesPattern(pattern))
-                tab->setTemporaryPermissionMatchPattern(nullptr);
-        }
-    }
-
-    if (!removePermissionMatchPatterns(m_grantedPermissionMatchPatterns, matchPatternsToRemove, equalityOnly, m_nextGrantedPermissionMatchPatternsExpirationDate, WKWebExtensionContextGrantedPermissionMatchPatternsWereRemovedNotification))
-        return false;
-
-    removeInjectedContent(matchPatternsToRemove);
-
-    return true;
-}
-
-bool WebExtensionContext::removeDeniedPermissions(PermissionsSet& permissionsToRemove)
-{
-    return removePermissions(m_deniedPermissions, permissionsToRemove, m_nextDeniedPermissionsExpirationDate, WKWebExtensionContextDeniedPermissionsWereRemovedNotification);
-}
-
-bool WebExtensionContext::removeDeniedPermissionMatchPatterns(MatchPatternSet& matchPatternsToRemove, EqualityOnly equalityOnly)
-{
-    if (!removePermissionMatchPatterns(m_deniedPermissionMatchPatterns, matchPatternsToRemove, equalityOnly, m_nextDeniedPermissionMatchPatternsExpirationDate, WKWebExtensionContextDeniedPermissionMatchPatternsWereRemovedNotification))
-        return false;
-
-    updateInjectedContent();
-
-    return true;
-}
-
-bool WebExtensionContext::removePermissions(PermissionsMap& permissionMap, PermissionsSet& permissionsToRemove, WallTime& nextExpirationDate, NSNotificationName notificationName)
-{
-    if (permissionsToRemove.isEmpty())
-        return false;
-
-    nextExpirationDate = WallTime::infinity();
-
-    PermissionsSet removedPermissions;
-    permissionMap.removeIf([&](auto& entry) {
-        if (permissionsToRemove.contains(entry.key)) {
-            removedPermissions.add(entry.key);
-            return true;
-        }
-
-        if (entry.value < nextExpirationDate)
-            nextExpirationDate = entry.value;
-
-        return false;
-    });
-
-    if (removedPermissions.isEmpty() || !notificationName)
-        return false;
-
-    permissionsDidChange(notificationName, removedPermissions);
-
-    return true;
-}
-
-bool WebExtensionContext::removePermissionMatchPatterns(PermissionMatchPatternsMap& matchPatternMap, MatchPatternSet& matchPatternsToRemove, EqualityOnly equalityOnly, WallTime& nextExpirationDate, NSNotificationName notificationName)
-{
-    if (matchPatternsToRemove.isEmpty())
-        return false;
-
-    nextExpirationDate = WallTime::infinity();
-
-    MatchPatternSet removedMatchPatterns;
-    matchPatternMap.removeIf([&](auto& entry) {
-        if (matchPatternsToRemove.contains(entry.key)) {
-            removedMatchPatterns.add(entry.key);
-            return true;
-        }
-
-        if (equalityOnly == EqualityOnly::Yes) {
-            if (entry.value < nextExpirationDate)
-                nextExpirationDate = entry.value;
-
-            return false;
-        }
-
-        for (auto& patternToRemove : matchPatternsToRemove) {
-            Ref pattern = entry.key;
-            if (patternToRemove->matchesPattern(pattern, WebExtensionMatchPattern::Options::IgnorePaths)) {
-                removedMatchPatterns.add(pattern);
-                return true;
-            }
-        }
-
-        if (entry.value < nextExpirationDate)
-            nextExpirationDate = entry.value;
-
-        return false;
-    });
-
-    if (removedMatchPatterns.isEmpty() || !notificationName)
-        return false;
-
-    permissionsDidChange(notificationName, removedMatchPatterns);
-
-    return true;
 }
 
 WebExtensionContext::PermissionsMap& WebExtensionContext::removeExpired(PermissionsMap& permissionMap, WallTime& nextExpirationDate, NSNotificationName notificationName)
@@ -1351,487 +1073,6 @@ void WebExtensionContext::requestPermissions(const PermissionsSet& requestedPerm
     [delegate webExtensionController:extensionController->wrapper() promptForPermissions:toAPI(neededPermissions) inTab:tab ? tab->delegate() : nil forExtensionContext:wrapper() completionHandler:makeBlockPtr([callbackAggregator](NSSet *allowedPermissions, NSDate *expirationDate) {
         callbackAggregator.get()(allowedPermissions, expirationDate);
     }).get()];
-}
-
-bool WebExtensionContext::needsPermission(const String& permission, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    ASSERT(!permission.isEmpty());
-    ASSERT(!options.contains(PermissionStateOptions::SkipRequestedPermissions));
-
-    switch (permissionState(permission, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return false;
-
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::needsPermission(const URL& url, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    ASSERT(!options.contains(PermissionStateOptions::SkipRequestedPermissions));
-
-    switch (permissionState(url, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return false;
-
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::needsPermission(const WebExtensionMatchPattern& pattern, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    ASSERT(!options.contains(PermissionStateOptions::SkipRequestedPermissions));
-
-    switch (permissionState(pattern, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return false;
-
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::hasPermission(const String& permission, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    ASSERT(!permission.isEmpty());
-
-    options.add(PermissionStateOptions::SkipRequestedPermissions);
-
-    switch (permissionState(permission, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return false;
-
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::hasPermission(const URL& url, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    options.add(PermissionStateOptions::SkipRequestedPermissions);
-
-    switch (permissionState(url, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return false;
-
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::hasPermission(const WebExtensionMatchPattern& pattern, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    options.add(PermissionStateOptions::SkipRequestedPermissions);
-
-    switch (permissionState(pattern, tab, options)) {
-    case PermissionState::Unknown:
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::DeniedExplicitly:
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-        return false;
-
-    case PermissionState::GrantedImplicitly:
-    case PermissionState::GrantedExplicitly:
-        return true;
-    }
-}
-
-bool WebExtensionContext::hasPermissions(PermissionsSet permissions, MatchPatternSet matchPatterns)
-{
-    for (auto& permission : permissions) {
-        if (!m_grantedPermissions.contains(permission))
-            return false;
-    }
-
-    for (auto& pattern : matchPatterns) {
-        bool matchFound = false;
-        for (auto& grantedPattern : currentPermissionMatchPatterns()) {
-            if (grantedPattern->matchesPattern(pattern, { WebExtensionMatchPattern::Options::IgnorePaths })) {
-                matchFound = true;
-                break;
-            }
-        }
-
-        if (!matchFound)
-            return false;
-    }
-
-    return true;
-}
-
-WebExtensionContext::PermissionState WebExtensionContext::permissionState(const String& permission, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    ASSERT(!permission.isEmpty());
-
-    if (tab && permission == String(WKWebExtensionPermissionTabs)) {
-        if (tab->extensionHasTemporaryPermission())
-            return PermissionState::GrantedExplicitly;
-    }
-
-    if (!WebExtension::supportedPermissions().contains(permission))
-        return PermissionState::Unknown;
-
-    if (deniedPermissions().contains(permission))
-        return PermissionState::DeniedExplicitly;
-
-    if (grantedPermissions().contains(permission))
-        return PermissionState::GrantedExplicitly;
-
-    if (options.contains(PermissionStateOptions::SkipRequestedPermissions))
-        return PermissionState::Unknown;
-
-    RefPtr extension = m_extension;
-    if (extension->hasRequestedPermission(permission))
-        return PermissionState::RequestedExplicitly;
-
-    if (options.contains(PermissionStateOptions::IncludeOptionalPermissions)) {
-        if (extension->optionalPermissions().contains(permission))
-            return PermissionState::RequestedImplicitly;
-    }
-
-    return PermissionState::Unknown;
-}
-
-WebExtensionContext::PermissionState WebExtensionContext::permissionState(const URL& url, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    if (url.isEmpty())
-        return PermissionState::Unknown;
-
-    if (isURLForThisExtension(url))
-        return PermissionState::GrantedImplicitly;
-
-    if (!WebExtensionMatchPattern::validSchemes().contains(url.protocol().toStringWithoutCopying()))
-        return PermissionState::Unknown;
-
-    if (tab) {
-        auto temporaryPattern = tab->temporaryPermissionMatchPattern();
-        if (temporaryPattern && temporaryPattern->matchesURL(url))
-            return PermissionState::GrantedExplicitly;
-    }
-
-    bool skipRequestedPermissions = options.contains(PermissionStateOptions::SkipRequestedPermissions);
-
-    // Access the maps here to remove any expired entries, and only do it once for this call.
-    auto& grantedPermissionMatchPatterns = this->grantedPermissionMatchPatterns();
-    auto& deniedPermissionMatchPatterns = this->deniedPermissionMatchPatterns();
-
-    // If the cache still has the URL, then it has not expired.
-    if (m_cachedPermissionURLs.contains(url)) {
-        PermissionState cachedState = m_cachedPermissionStates.get(url);
-
-        // We only want to return an unknown cached state if the SkippingRequestedPermissions option isn't used.
-        if (cachedState != PermissionState::Unknown || skipRequestedPermissions) {
-            // Move the URL to the end, so it stays in the cache longer as a recent hit.
-            m_cachedPermissionURLs.appendOrMoveToLast(url);
-
-            if ((cachedState == PermissionState::RequestedExplicitly || cachedState == PermissionState::RequestedImplicitly) && skipRequestedPermissions)
-                return PermissionState::Unknown;
-
-            return cachedState;
-        }
-    }
-
-    auto cacheResultAndReturn = ^PermissionState(PermissionState result) {
-        m_cachedPermissionURLs.appendOrMoveToLast(url);
-        m_cachedPermissionStates.set(url, result);
-
-        ASSERT(m_cachedPermissionURLs.size() == m_cachedPermissionURLs.size());
-
-        if (m_cachedPermissionURLs.size() <= maximumCachedPermissionResults)
-            return result;
-
-        URL firstCachedURL = m_cachedPermissionURLs.takeFirst();
-        m_cachedPermissionStates.remove(firstCachedURL);
-
-        ASSERT(m_cachedPermissionURLs.size() == m_cachedPermissionURLs.size());
-
-        return result;
-    };
-
-    // First, check for patterns that are specific to certain domains, ignoring wildcard host patterns that
-    // match all hosts. The order is denied, then granted. This makes sure denied takes precedence over granted.
-
-    auto urlMatchesPatternIgnoringWildcardHostPatterns = ^(WebExtensionMatchPattern& pattern) {
-        if (pattern.matchesAllHosts())
-            return false;
-        return pattern.matchesURL(url);
-    };
-
-    for (auto& deniedPermissionEntry : deniedPermissionMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(deniedPermissionEntry.key))
-            return cacheResultAndReturn(PermissionState::DeniedExplicitly);
-    }
-
-    for (auto& grantedPermissionEntry : grantedPermissionMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(grantedPermissionEntry.key))
-            return cacheResultAndReturn(PermissionState::GrantedExplicitly);
-    }
-
-    // Next, check for patterns that are wildcard host patterns that match all hosts (<all_urls>, *://*/*, etc),
-    // also checked in denied, then granted order. Doing these wildcard patterns separately allows for blanket
-    // patterns to be set as default policies while allowing for specific domains to still be granted or denied.
-
-    auto urlMatchesWildcardHostPatterns = ^(WebExtensionMatchPattern& pattern) {
-        if (!pattern.matchesAllHosts())
-            return false;
-        return pattern.matchesURL(url);
-    };
-
-    for (auto& deniedPermissionEntry : deniedPermissionMatchPatterns) {
-        if (urlMatchesWildcardHostPatterns(deniedPermissionEntry.key))
-            return cacheResultAndReturn(PermissionState::DeniedImplicitly);
-    }
-
-    for (auto& grantedPermissionEntry : grantedPermissionMatchPatterns) {
-        if (urlMatchesWildcardHostPatterns(grantedPermissionEntry.key))
-            return cacheResultAndReturn(PermissionState::GrantedImplicitly);
-    }
-
-    // Finally, check for requested patterns, allowing any pattern that matches. This is the default state
-    // of the extension before any patterns are granted or denied, so it should always be last.
-
-    if (skipRequestedPermissions)
-        return cacheResultAndReturn(PermissionState::Unknown);
-
-    auto requestedMatchPatterns = protectedExtension()->allRequestedMatchPatterns();
-    for (auto& requestedMatchPattern : requestedMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(requestedMatchPattern))
-            return cacheResultAndReturn(PermissionState::RequestedExplicitly);
-
-        if (urlMatchesWildcardHostPatterns(requestedMatchPattern))
-            return cacheResultAndReturn(PermissionState::RequestedImplicitly);
-    }
-
-    if (hasPermission(WebExtensionPermission::webNavigation(), tab, options))
-        return cacheResultAndReturn(PermissionState::RequestedImplicitly);
-
-    if (hasPermission(WebExtensionPermission::declarativeNetRequestFeedback(), tab, options))
-        return cacheResultAndReturn(PermissionState::RequestedImplicitly);
-
-    if (options.contains(PermissionStateOptions::RequestedWithTabsPermission) && hasPermission(WKWebExtensionPermissionTabs, tab, options))
-        return PermissionState::RequestedImplicitly;
-
-    if (options.contains(PermissionStateOptions::IncludeOptionalPermissions)) {
-        if (WebExtensionMatchPattern::patternsMatchURL(protectedExtension()->optionalPermissionMatchPatterns(), url))
-            return cacheResultAndReturn(PermissionState::RequestedImplicitly);
-    }
-
-    return cacheResultAndReturn(PermissionState::Unknown);
-}
-
-WebExtensionContext::PermissionState WebExtensionContext::permissionState(const WebExtensionMatchPattern& pattern, WebExtensionTab* tab, OptionSet<PermissionStateOptions> options)
-{
-    if (!pattern.isValid())
-        return PermissionState::Unknown;
-
-    if (!pattern.matchesAllURLs() && pattern.matchesURL(baseURL()))
-        return PermissionState::GrantedImplicitly;
-
-    if (!pattern.matchesAllURLs() && !WebExtensionMatchPattern::validSchemes().contains(pattern.scheme()))
-        return PermissionState::Unknown;
-
-    if (tab) {
-        auto temporaryPattern = tab->temporaryPermissionMatchPattern();
-        if (temporaryPattern && temporaryPattern->matchesPattern(pattern))
-            return PermissionState::GrantedExplicitly;
-    }
-
-    // Access the maps here to remove any expired entries, and only do it once for this call.
-    auto& grantedPermissionMatchPatterns = this->grantedPermissionMatchPatterns();
-    auto& deniedPermissionMatchPatterns = this->deniedPermissionMatchPatterns();
-
-    // First, check for patterns that are specific to certain domains, ignoring wildcard host patterns that
-    // match all hosts. The order is denied, then granted. This makes sure denied takes precedence over granted.
-
-    auto urlMatchesPatternIgnoringWildcardHostPatterns = ^(WebExtensionMatchPattern& otherPattern) {
-        if (pattern.matchesAllHosts())
-            return false;
-        return pattern.matchesPattern(otherPattern);
-    };
-
-    for (auto& deniedPermissionEntry : deniedPermissionMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(deniedPermissionEntry.key))
-            return PermissionState::DeniedExplicitly;
-    }
-
-    for (auto& grantedPermissionEntry : grantedPermissionMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(grantedPermissionEntry.key))
-            return PermissionState::GrantedExplicitly;
-    }
-
-    // Next, check for patterns that are wildcard host patterns that match all hosts (<all_urls>, *://*/*, etc),
-    // also checked in denied, then granted order. Doing these wildcard patterns separately allows for blanket
-    // patterns to be set as default policies while allowing for specific domains to still be granted or denied.
-
-    auto urlMatchesWildcardHostPatterns = ^(WebExtensionMatchPattern& otherPattern) {
-        if (!pattern.matchesAllHosts())
-            return false;
-        return pattern.matchesPattern(otherPattern);
-    };
-
-    for (auto& deniedPermissionEntry : deniedPermissionMatchPatterns) {
-        if (urlMatchesWildcardHostPatterns(deniedPermissionEntry.key))
-            return PermissionState::DeniedImplicitly;
-    }
-
-    for (auto& grantedPermissionEntry : grantedPermissionMatchPatterns) {
-        if (urlMatchesWildcardHostPatterns(grantedPermissionEntry.key))
-            return PermissionState::GrantedImplicitly;
-    }
-
-    // Finally, check for requested patterns, allowing any pattern that matches. This is the default state
-    // of the extension before any patterns are granted or denied, so it should always be last.
-
-    if (options.contains(PermissionStateOptions::SkipRequestedPermissions))
-        return PermissionState::Unknown;
-
-    auto requestedMatchPatterns = protectedExtension()->allRequestedMatchPatterns();
-    for (auto& requestedMatchPattern : requestedMatchPatterns) {
-        if (urlMatchesPatternIgnoringWildcardHostPatterns(requestedMatchPattern))
-            return PermissionState::RequestedExplicitly;
-
-        if (urlMatchesWildcardHostPatterns(requestedMatchPattern))
-            return PermissionState::RequestedImplicitly;
-    }
-
-    if (options.contains(PermissionStateOptions::RequestedWithTabsPermission) && hasPermission(WKWebExtensionPermissionTabs, tab, options))
-        return PermissionState::RequestedImplicitly;
-
-    if (options.contains(PermissionStateOptions::IncludeOptionalPermissions)) {
-        if (WebExtensionMatchPattern::patternsMatchPattern(protectedExtension()->optionalPermissionMatchPatterns(), pattern))
-            return PermissionState::RequestedImplicitly;
-    }
-
-    return PermissionState::Unknown;
-}
-
-void WebExtensionContext::setPermissionState(PermissionState state, const String& permission, WallTime expirationDate)
-{
-    ASSERT(!permission.isEmpty());
-    ASSERT(!expirationDate.isNaN());
-
-    auto permissions = PermissionsSet { permission };
-
-    switch (state) {
-    case PermissionState::DeniedExplicitly:
-        denyPermissions(WTFMove(permissions), expirationDate);
-        break;
-
-    case PermissionState::Unknown: {
-        removeGrantedPermissions(permissions);
-        removeDeniedPermissions(permissions);
-        break;
-    }
-
-    case PermissionState::GrantedExplicitly:
-        grantPermissions(WTFMove(permissions), expirationDate);
-        break;
-
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-    case PermissionState::GrantedImplicitly:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-}
-
-void WebExtensionContext::setPermissionState(PermissionState state, const URL& url, WallTime expirationDate)
-{
-    ASSERT(!url.isEmpty());
-    ASSERT(!expirationDate.isNaN());
-
-    RefPtr pattern = WebExtensionMatchPattern::getOrCreate(url);
-    if (!pattern)
-        return;
-
-    setPermissionState(state, *pattern, expirationDate);
-}
-
-void WebExtensionContext::setPermissionState(PermissionState state, const WebExtensionMatchPattern& pattern, WallTime expirationDate)
-{
-    ASSERT(pattern.isValid());
-    ASSERT(!expirationDate.isNaN());
-
-    auto patterns = MatchPatternSet { const_cast<WebExtensionMatchPattern&>(pattern) };
-    auto equalityOnly = pattern.matchesAllHosts() ? EqualityOnly::Yes : EqualityOnly::No;
-
-    switch (state) {
-    case PermissionState::DeniedExplicitly:
-        denyPermissionMatchPatterns(WTFMove(patterns), expirationDate, equalityOnly);
-        break;
-
-    case PermissionState::Unknown: {
-        removeGrantedPermissionMatchPatterns(patterns, equalityOnly);
-        removeDeniedPermissionMatchPatterns(patterns, equalityOnly);
-        break;
-    }
-
-    case PermissionState::GrantedExplicitly:
-        grantPermissionMatchPatterns(WTFMove(patterns), expirationDate, equalityOnly);
-        break;
-
-    case PermissionState::DeniedImplicitly:
-    case PermissionState::RequestedImplicitly:
-    case PermissionState::RequestedExplicitly:
-    case PermissionState::GrantedImplicitly:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-}
-
-void WebExtensionContext::clearCachedPermissionStates()
-{
-    m_cachedPermissionStates.clear();
-    m_cachedPermissionURLs.clear();
-}
-
-bool WebExtensionContext::hasAccessToAllURLs()
-{
-    for (auto& pattern : currentPermissionMatchPatterns()) {
-        if (pattern->matchesAllURLs())
-            return true;
-    }
-
-    return false;
-}
-
-bool WebExtensionContext::hasAccessToAllHosts()
-{
-    for (auto& pattern : currentPermissionMatchPatterns()) {
-        if (pattern->matchesAllHosts())
-            return true;
-    }
-
-    return false;
 }
 
 void WebExtensionContext::removePage(WebPageProxy& page)
@@ -2149,17 +1390,6 @@ WebExtensionContext::WindowVector WebExtensionContext::openWindows(IgnoreExtensi
         if (ignoreExtensionAccess == IgnoreExtensionAccess::No && !window->extensionHasAccess())
             return std::nullopt;
         return *window;
-    });
-}
-
-WebExtensionContext::TabVector WebExtensionContext::openTabs(IgnoreExtensionAccess ignoreExtensionAccess) const
-{
-    return WTF::compactMap(m_tabMap, [&](auto& entry) -> std::optional<Ref<WebExtensionTab>> {
-        if (!entry.value->isOpen())
-            return std::nullopt;
-        if (ignoreExtensionAccess == IgnoreExtensionAccess::No && !entry.value->extensionHasAccess())
-            return std::nullopt;
-        return entry.value;
     });
 }
 
@@ -3447,20 +2677,6 @@ URL WebExtensionContext::backgroundContentURL()
     return { m_baseURL, extension->backgroundContentPath() };
 }
 
-void WebExtensionContext::loadBackgroundContent(CompletionHandler<void(RefPtr<API::Error>)>&& completionHandler)
-{
-    if (!protectedExtension()->hasBackgroundContent()) {
-        if (completionHandler)
-            completionHandler(createError(Error::NoBackgroundContent));
-        return;
-    }
-
-    wakeUpBackgroundContentIfNecessary([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
-        if (completionHandler)
-            completionHandler(backgroundContentLoadError());
-    });
-}
-
 void WebExtensionContext::loadBackgroundWebViewDuringLoad()
 {
     ASSERT(isLoaded());
@@ -4272,55 +3488,6 @@ void WebExtensionContext::inspectorEffectiveAppearanceDidChange(API::InspectorEx
 }
 #endif // ENABLE(INSPECTOR_EXTENSIONS)
 
-void WebExtensionContext::addInjectedContent(const InjectedContentVector& injectedContents)
-{
-    if (!safeToInjectContent())
-        return;
-
-    // Only add content for one "all hosts" pattern if the extension has the permission.
-    // This avoids duplicate injected content if individual hosts are granted in addition to "all hosts".
-    if (hasAccessToAllHosts()) {
-        addInjectedContent(injectedContents, WebExtensionMatchPattern::allHostsAndSchemesMatchPattern());
-        return;
-    }
-
-    MatchPatternSet grantedMatchPatterns;
-    for (auto& pattern : currentPermissionMatchPatterns())
-        grantedMatchPatterns.add(pattern);
-
-    addInjectedContent(injectedContents, grantedMatchPatterns);
-}
-
-void WebExtensionContext::addInjectedContent(const InjectedContentVector& injectedContents, const MatchPatternSet& grantedMatchPatterns)
-{
-    if (!safeToInjectContent())
-        return;
-
-    if (hasAccessToAllHosts()) {
-        // If this is not currently granting "all hosts", then we can return early. This means
-        // the "all hosts" pattern injected content was added already, and no content needs added.
-        // Continuing here would add multiple copies of injected content, one for "all hosts" and
-        // another for individually granted hosts.
-        if (!WebExtensionMatchPattern::patternsMatchAllHosts(grantedMatchPatterns))
-            return;
-
-        // Since we are granting "all hosts" we want to remove any previously added content since
-        // "all hosts" will cover any hosts previously added, and we don't want duplicate scripts.
-        MatchPatternSet patternsToRemove;
-        for (auto& entry : m_injectedScriptsPerPatternMap)
-            patternsToRemove.add(entry.key);
-
-        for (auto& entry : m_injectedStyleSheetsPerPatternMap)
-            patternsToRemove.add(entry.key);
-
-        for (auto& pattern : patternsToRemove)
-            removeInjectedContent(pattern);
-    }
-
-    for (auto& pattern : grantedMatchPatterns)
-        addInjectedContent(injectedContents, pattern);
-}
-
 static WebCore::UserScriptInjectionTime toImpl(WebExtension::InjectionTime injectionTime)
 {
     switch (injectionTime) {
@@ -4498,94 +3665,6 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
     }
 }
 
-void WebExtensionContext::addInjectedContent(WebUserContentControllerProxy& userContentController)
-{
-    if (!safeToInjectContent())
-        return;
-
-    for (auto& entry : m_injectedScriptsPerPatternMap) {
-        for (auto& userScript : entry.value)
-            userContentController.addUserScript(userScript, InjectUserScriptImmediately::Yes);
-    }
-
-    for (auto& entry : m_injectedStyleSheetsPerPatternMap) {
-        for (auto& userStyleSheet : entry.value)
-            userContentController.addUserStyleSheet(userStyleSheet);
-    }
-}
-
-void WebExtensionContext::removeInjectedContent()
-{
-    if (!isLoaded())
-        return;
-
-    // Use all user content controllers in case the extension was briefly allowed in private browsing
-    // and content was injected into any of those content controllers.
-    for (Ref userContentController : extensionController()->allUserContentControllers()) {
-        for (auto& entry : m_injectedScriptsPerPatternMap) {
-            for (auto& userScript : entry.value)
-                userContentController->removeUserScript(userScript);
-        }
-
-        for (auto& entry : m_injectedStyleSheetsPerPatternMap) {
-            for (auto& userStyleSheet : entry.value)
-                userContentController->removeUserStyleSheet(userStyleSheet);
-        }
-    }
-
-    m_injectedScriptsPerPatternMap.clear();
-    m_injectedStyleSheetsPerPatternMap.clear();
-}
-
-void WebExtensionContext::removeInjectedContent(const MatchPatternSet& removedMatchPatterns)
-{
-    if (!isLoaded())
-        return;
-
-    for (auto& removedPattern : removedMatchPatterns)
-        removeInjectedContent(removedPattern);
-
-    // If "all hosts" was removed, then we need to add back any individual granted hosts,
-    // now that the catch all pattern has been removed.
-    if (WebExtensionMatchPattern::patternsMatchAllHosts(removedMatchPatterns))
-        addInjectedContent();
-}
-
-void WebExtensionContext::removeInjectedContent(WebExtensionMatchPattern& pattern)
-{
-    if (!isLoaded())
-        return;
-
-    auto originInjectedScripts = m_injectedScriptsPerPatternMap.take(pattern);
-    auto originInjectedStyleSheets = m_injectedStyleSheetsPerPatternMap.take(pattern);
-
-    if (originInjectedScripts.isEmpty() && originInjectedStyleSheets.isEmpty())
-        return;
-
-    // Use all user content controllers in case the extension was briefly allowed in private browsing
-    // and content was injected into any of those content controllers.
-    for (Ref userContentController : extensionController()->allUserContentControllers()) {
-        for (auto& userScript : originInjectedScripts)
-            userContentController->removeUserScript(userScript);
-
-        for (auto& userStyleSheet : originInjectedStyleSheets)
-            userContentController->removeUserStyleSheet(userStyleSheet);
-    }
-}
-
-void WebExtensionContext::removeInjectedContent(WebUserContentControllerProxy& userContentController)
-{
-    for (auto& entry : m_injectedScriptsPerPatternMap) {
-        for (auto& userScript : entry.value)
-            userContentController.removeUserScript(userScript);
-    }
-
-    for (auto& entry : m_injectedStyleSheetsPerPatternMap) {
-        for (auto& userStyleSheet : entry.value)
-            userContentController.removeUserStyleSheet(userStyleSheet);
-    }
-}
-
 void WebExtensionContext::unloadDeclarativeNetRequestState()
 {
     removeDeclarativeNetRequestRules();
@@ -4599,17 +3678,6 @@ void WebExtensionContext::unloadDeclarativeNetRequestState()
     m_declarativeNetRequestSessionRulesStore = nullptr;
 }
 
-String WebExtensionContext::declarativeNetRequestContentRuleListFilePath()
-{
-    if (!m_declarativeNetRequestContentRuleListFilePath.isEmpty())
-        return m_declarativeNetRequestContentRuleListFilePath;
-
-    auto directoryPath = storageIsPersistent() ? storageDirectory() : String(FileSystem::createTemporaryDirectory(@"DeclarativeNetRequest"));
-    m_declarativeNetRequestContentRuleListFilePath = FileSystem::pathByAppendingComponent(directoryPath, "DeclarativeNetRequestContentRuleList.data"_s);
-
-    return m_declarativeNetRequestContentRuleListFilePath;
-}
-
 void WebExtensionContext::removeDeclarativeNetRequestRules()
 {
     if (!isLoaded())
@@ -4619,26 +3687,6 @@ void WebExtensionContext::removeDeclarativeNetRequestRules()
     // and content was injected into any of those content controllers.
     for (Ref userContentController : extensionController()->allUserContentControllers())
         userContentController->removeContentRuleList(uniqueIdentifier());
-}
-
-void WebExtensionContext::addDeclarativeNetRequestRulesToPrivateUserContentControllers()
-{
-    API::ContentRuleListStore::defaultStoreSingleton().lookupContentRuleListFile(declarativeNetRequestContentRuleListFilePath(), uniqueIdentifier().isolatedCopy(), [this, protectedThis = Ref { *this }](RefPtr<API::ContentRuleList> ruleList, std::error_code) {
-        if (!ruleList)
-            return;
-
-        // The extension could have been unloaded before this was called.
-        if (!isLoaded())
-            return;
-
-        for (Ref controller : extensionController()->allPrivateUserContentControllers())
-            controller->addContentRuleList(*ruleList, m_baseURL);
-    });
-}
-
-bool WebExtensionContext::hasContentModificationRules()
-{
-    return declarativeNetRequestEnabledRulesetCount() || !m_sessionRulesIDs.isEmpty() || !m_dynamicRulesIDs.isEmpty();
 }
 
 static NSString *computeStringHashForContentBlockerRules(NSString *rules)
