@@ -160,6 +160,7 @@ WTF_EXPORT_PRIVATE CString currentExecutablePath();
 WTF_EXPORT_PRIVATE CString currentExecutableName();
 WTF_EXPORT_PRIVATE String userCacheDirectory();
 WTF_EXPORT_PRIVATE String userDataDirectory();
+WTF_EXPORT_PRIVATE String createTemporaryDirectory(const String& directoryPrefix = nullString());
 #if ENABLE(DEVELOPER_MODE)
 WTF_EXPORT_PRIVATE CString webkitTopLevelDirectory();
 #endif
