@@ -170,7 +170,10 @@ if (ENABLE_WEBXR AND USE_OPENXR)
 endif ()
 
 if (ENABLE_WK_WEB_EXTENSIONS)
+if (ENABLE_2022_GLIB_API)
     ADD_WK2_TEST(TestWebKitWebExtension ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtension.cpp)
+    ADD_WK2_TEST(TestWebKitWebExtensionContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtensionContext.cpp)
+endif ()
     ADD_WK2_TEST(TestWebKitWebExtensionMatchPattern ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebExtensionMatchPattern.cpp)
 endif ()
 

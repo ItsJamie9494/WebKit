@@ -96,6 +96,28 @@
 #include "WebExtensionBookmarksParameters.h"
 #endif
 
+#if PLATFORM(GTK)
+#include "WebKitNavigationPolicyDecision.h"
+#include "WebKitSettings.h"
+#include "WebKitWebExtensionContext.h"
+#include "WebKitWebView.h"
+#include <wtf/glib/GRefPtr.h>
+#endif
+
+#if PLATFORM(GTK)
+using WebViewClass = WebKitWebView;
+using WebViewConfiguration = WebKitSettings;
+using NavigationPolicyAction = WebKitNavigationPolicyDecision;
+#else
+OBJC_CLASS WKWebView;
+OBJC_CLASS WKWebViewConfiguration;
+using WebViewClass = WKWebView;
+using WebViewConfiguration = WKWebViewConfiguration;
+
+OBJC_CLASS WKNavigationAction;
+using NavigationPolicyAction = WKNavigationAction;
+#endif
+
 OBJC_CLASS NSArray;
 OBJC_CLASS NSDate;
 OBJC_CLASS NSDictionary;
@@ -108,10 +130,7 @@ OBJC_CLASS NSURL;
 OBJC_CLASS NSUUID;
 OBJC_CLASS WKContentRuleListStore;
 OBJC_CLASS WKNavigation;
-OBJC_CLASS WKNavigationAction;
 OBJC_CLASS WKWebExtensionContext;
-OBJC_CLASS WKWebView;
-OBJC_CLASS WKWebViewConfiguration;
 OBJC_CLASS _WKWebExtensionContextDelegate;
 OBJC_CLASS _WKWebExtensionRegisteredScriptsSQLiteStore;
 OBJC_PROTOCOL(WKWebExtensionTab);
@@ -164,8 +183,19 @@ public:
     void ref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::ref(); }
     void deref() const final { API::ObjectImpl<API::Object::Type::WebExtensionContext>::deref(); }
 
-    static String plistFileName() { return "State.plist"_s; };
+    static String plistFileName()
+    {
+#if PLATFORM(COCOA)
+        return "State.plist"_s;
+#else
+        return "State.ini"_s;
+#endif
+    };
+#if PLATFORM(COCOA)
     static NSMutableDictionary *readStateFromPath(const String&);
+#else
+    static GRefPtr<GKeyFile> readStateFromPath(const String&);
+#endif
     static bool readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL);
     static bool readDisplayNameFromState(const String& filePath, String& outDisplayName);
 
@@ -173,7 +203,11 @@ public:
 
     static WebExtensionContext* get(WebExtensionContextIdentifier);
 
+#if PLATFORM(COCOA)
     explicit WebExtensionContext(Ref<WebExtension>&&);
+#elif PLATFORM(GTK)
+    explicit WebExtensionContext(Ref<WebExtension>&&, GRefPtr<WebKitWebExtensionContext>&&);
+#endif
 
     using PermissionsMap = HashMap<String, WallTime>;
     using PermissionMatchPatternsMap = HashMap<Ref<WebExtensionMatchPattern>, WallTime>;
@@ -313,7 +347,11 @@ public:
     struct InspectorContext {
         std::optional<WebExtensionTabIdentifier> tabIdentifier;
         RefPtr<API::InspectorExtension> extension;
+#if PLATFORM(COCOA)
         RetainPtr<WKWebView> backgroundWebView;
+#else
+        GRefPtr<WebKitWebView> backgroundWebView;
+#endif
         RefPtr<ProcessThrottlerActivity> activity;
     };
 #endif
@@ -565,9 +603,7 @@ public:
 #endif
 
     URL backgroundContentURL();
-#if PLATFORM(COCOA)
-    WKWebView *backgroundWebView() const { return m_backgroundWebView.get(); }
-#endif
+    WebViewClass *backgroundWebView() const { return static_cast<WebViewClass*>(m_backgroundWebView.get()); }
     bool safeToLoadBackgroundContent() const { return m_safeToLoadBackgroundContent; }
 
     RefPtr<API::Error> backgroundContentLoadError() const { return m_backgroundContentLoadError; }
@@ -575,10 +611,10 @@ public:
     const String& backgroundWebViewInspectionName();
     void setBackgroundWebViewInspectionName(const String&);
 
-    bool decidePolicyForNavigationAction(WKWebView *, WKNavigationAction *);
-    void didFinishDocumentLoad(WKWebView *, WKNavigation *);
-    void didFailNavigation(WKWebView *, WKNavigation *, RefPtr<API::Error>);
-    void webViewWebContentProcessDidTerminate(WKWebView *);
+    bool decidePolicyForNavigationAction(WebViewClass *, NavigationPolicyAction *);
+    void didFinishDocumentLoad(WebViewClass *);
+    void didFailNavigation(WebViewClass *, RefPtr<API::Error>);
+    void webViewWebContentProcessDidTerminate(WebViewClass *);
 
 #if PLATFORM(MAC)
     void runOpenPanel(WKWebView *, WKOpenPanelParameters *, void (^)(NSArray *));
@@ -616,11 +652,11 @@ public:
 
     void enumerateExtensionPages(NOESCAPE Function<void(WebPageProxy&, bool& stop)>&&);
 
-    WKWebView *relatedWebView();
+    WebViewClass *relatedWebView();
     String processDisplayName();
     Vector<String> corsDisablingPatterns();
     void updateCORSDisablingPatternsOnAllExtensionPages();
-    WKWebViewConfiguration *webViewConfiguration(WebViewPurpose = WebViewPurpose::Any);
+    WebViewConfiguration *webViewConfiguration(WebViewPurpose = WebViewPurpose::Any);
 
     WebsiteDataStore* websiteDataStore(std::optional<PAL::SessionID> = std::nullopt) const;
 
@@ -670,8 +706,13 @@ private:
     int toAPIError(WebExtensionContext::Error);
 
     String stateFilePath() const;
+#if PLATFORM(COCOA)
     NSDictionary *currentState() const;
     NSDictionary *readStateFromStorage();
+#else
+    GRefPtr<GKeyFile> currentState() const;
+    GRefPtr<GKeyFile> readStateFromStorage();
+#endif
     void writeStateToStorage() const;
 
     void determineInstallReasonDuringLoad();
@@ -691,6 +732,8 @@ private:
     bool isBackgroundPage(WebCore::FrameIdentifier) const;
     bool isBackgroundPage(WebPageProxyIdentifier) const;
     bool backgroundContentIsLoaded() const;
+
+    bool isNotRunningInTestRunner();
 
     void loadBackgroundWebViewDuringLoad();
     void loadBackgroundWebViewIfNeeded();
@@ -718,7 +761,7 @@ private:
     InspectorTabVector openInspectors(Function<bool(WebExtensionTab&, WebInspectorUIProxy&)>&& = nullptr) const;
     InspectorTabVector loadedInspectors() const;
 
-    bool isInspectorBackgroundPage(WKWebView *) const;
+    bool isInspectorBackgroundPage(WebViewClass *) const;
 
     void loadInspectorBackgroundPagesDuringLoad();
     void unloadInspectorBackgroundPages();
@@ -1007,8 +1050,10 @@ private:
     // webRequest support.
     bool hasPermissionToSendWebRequestEvent(WebExtensionTab*, const URL& resourceURL, const ResourceLoadInfo&);
 
+#if PLATFORM(COCOA)
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
+#endif
 
     bool isLoaded(IPC::Decoder&) const { return isLoaded(); }
     bool isLoadedAndPrivilegedMessage(IPC::Decoder& message) const { return isLoaded() && isPrivilegedMessage(message); }
@@ -1020,6 +1065,8 @@ private:
 
 #if PLATFORM(COCOA)
     RetainPtr<NSMutableDictionary> m_state;
+#else
+    GRefPtr<GKeyFile> m_state;
 #endif
     Vector<Ref<API::Error>> m_errors;
 
@@ -1068,9 +1115,12 @@ private:
 
 #if PLATFORM(COCOA)
     RetainPtr<WKWebView> m_backgroundWebView;
-    RefPtr<ProcessThrottlerActivity> m_backgroundWebViewActivity;
     RetainPtr<_WKWebExtensionContextDelegate> m_delegate;
+#else
+    GRefPtr<WebKitWebView> m_backgroundWebView;
+    GRefPtr<WebKitWebExtensionContext> m_delegate;
 #endif
+    RefPtr<ProcessThrottlerActivity> m_backgroundWebViewActivity;
     RefPtr<API::Error> m_backgroundContentLoadError;
 
     String m_backgroundWebViewInspectionName;

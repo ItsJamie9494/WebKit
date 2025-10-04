@@ -30,9 +30,25 @@
 #include "WebKitSettings.h"
 #include "WebPreferences.h"
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+#include "WebExtensionContext.h"
+#endif
+
 WebKit::WebPreferences* webkitSettingsGetPreferences(WebKitSettings*);
 
 WK_EXPORT void webkitSettingsSetMediaCaptureRequiresSecureConnection(WebKitSettings*, bool required);
 WK_EXPORT void webkitSettingsSetGetUserMediaRequiresFocus(WebKitSettings*, bool required);
+
+WK_EXPORT bool webkitSettingsGetSiteIsolationEnabled(WebKitSettings*);
+WK_EXPORT void webkitSettingsSetHiddenPageDOMTimerThrottlingEnabled(WebKitSettings*, bool enabled);
+WK_EXPORT void webkitSettingsSetPageVisibilityBasedProcessSuppressionEnabled(WebKitSettings*, bool enabled);
+WK_EXPORT void webkitSettingsSetShouldTakeNearSuspendedAssertions(WebKitSettings*, bool enabled);
+WK_EXPORT void webkitSettingsSetBackgroundWebContentRunningBoardThrottlingEnabled(WebKitSettings*, bool enabled);
+WK_EXPORT void webkitSettingsSetShouldDropNearSuspendedAssertionAfterDelay(WebKitSettings*, bool enabled);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+WK_EXPORT RefPtr<WebKit::WebExtensionContext> webkitSettingsGetWebExtensionContext(WebKitSettings*);
+WK_EXPORT void webkitSettingsSetWebExtensionContext(WebKitSettings*, RefPtr<WebKit::WebExtensionContext>);
+#endif // ENABLE(WK_WEB_EXTENSIONS)
 
 #endif // WebKitSettingsPrivate_h

@@ -97,6 +97,9 @@ struct _WebKitSettingsPrivate {
 #if PLATFORM(GTK)
     bool enableBackForwardNavigationGestures { false };
 #endif
+#if ENABLE(WK_WEB_EXTENSIONS)
+    RefPtr<WebExtensionContext> webExtensionContext;
+#endif
 };
 
 /**
@@ -4162,6 +4165,57 @@ void webkitSettingsSetGetUserMediaRequiresFocus(WebKitSettings* settings, bool r
     WebKitSettingsPrivate* priv = settings->priv;
     priv->preferences->setGetUserMediaRequiresFocus(required);
 }
+
+bool webkitSettingsGetSiteIsolationEnabled(WebKitSettings* settings)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    return priv->preferences->siteIsolationEnabled();
+}
+
+void webkitSettingsSetHiddenPageDOMTimerThrottlingEnabled(WebKitSettings* settings, bool enabled)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->preferences->setHiddenPageDOMTimerThrottlingEnabled(enabled);
+}
+
+void webkitSettingsSetPageVisibilityBasedProcessSuppressionEnabled(WebKitSettings* settings, bool enabled)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->preferences->setPageVisibilityBasedProcessSuppressionEnabled(enabled);
+}
+
+void webkitSettingsSetShouldTakeNearSuspendedAssertions(WebKitSettings* settings, bool enabled)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->preferences->setShouldTakeNearSuspendedAssertions(enabled);
+}
+
+void webkitSettingsSetBackgroundWebContentRunningBoardThrottlingEnabled(WebKitSettings* settings, bool enabled)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->preferences->setBackgroundWebContentRunningBoardThrottlingEnabled(enabled);
+}
+
+void webkitSettingsSetShouldDropNearSuspendedAssertionAfterDelay(WebKitSettings* settings, bool enabled)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->preferences->setShouldDropNearSuspendedAssertionAfterDelay(enabled);
+}
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+RefPtr<WebExtensionContext> webkitSettingsGetWebExtensionContext(WebKitSettings* settings)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    return priv->webExtensionContext;
+}
+
+void webkitSettingsSetWebExtensionContext(WebKitSettings* settings, RefPtr<WebExtensionContext> context)
+{
+    WebKitSettingsPrivate* priv = settings->priv;
+    priv->webExtensionContext = context;
+}
+#endif
+
 
 /**
  * webkit_settings_get_media_content_types_requiring_hardware_support:
