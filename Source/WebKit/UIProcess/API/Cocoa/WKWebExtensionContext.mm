@@ -156,7 +156,7 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionContext, WebExtensionContext
 
 - (NSString *)inspectionName
 {
-    return Ref { *_webExtensionContext }->backgroundWebViewInspectionName().createNSString().get();
+    return Ref { *_webExtensionContext }->backgroundWebViewInspectionName().createNSString().autorelease();
 }
 
 - (void)setInspectionName:(NSString *)name
