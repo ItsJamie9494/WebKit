@@ -133,6 +133,31 @@ inline Ref<WebExtensionCallbackHandler> toJSErrorCallbackHandler(JSContextRef co
     return WebExtensionCallbackHandler::create(context, runtime);
 }
 
+template<size_t ArgumentCount>
+JSValueRef callWithArguments(JSObjectRef callbackFunction, JSRetainPtr<JSGlobalContextRef>& globalContext, std::array<JSValueRef, ArgumentCount>&& arguments, JSValueRef* exception = nullptr)
+{
+    if (!globalContext || !callbackFunction)
+        return nullptr;
+    return JSObjectCallAsFunction(globalContext.get(), callbackFunction, nullptr, ArgumentCount, arguments.data(), exception);
+}
+
+template<size_t ArgumentCount>
+inline JSValueRef callObjectWithArguments(JSValueRef callbackFunction, JSContextRef context, std::array<JSValueRef, ArgumentCount>&& arguments, JSValueRef* exception = nullptr)
+{
+    if (!context || !callbackFunction)
+        return nullptr;
+    if (!JSValueIsObject(context, callbackFunction))
+        return nullptr;
+    JSObjectRef callbackObject = JSValueToObject(context, callbackFunction, exception);
+    if (!callbackObject)
+        return nullptr;
+    return JSObjectCallAsFunction(JSContextGetGlobalContext(context), callbackObject, nullptr, ArgumentCount, arguments.data(), exception);
+}
+
+template<typename T> Vector<T> toVector(JSContextRef, JSValueRef);
+
+template<> Vector<JSValueRef> toVector<JSValueRef>(JSContextRef, JSValueRef);
+
 RefPtr<WebExtensionCallbackHandler> toJSCallbackHandler(JSContextRef, JSValueRef callback, WebExtensionAPIRuntimeBase&);
 
 String toString(JSContextRef, JSValueRef, NullStringPolicy = NullStringPolicy::NullAndUndefinedAsNullString);

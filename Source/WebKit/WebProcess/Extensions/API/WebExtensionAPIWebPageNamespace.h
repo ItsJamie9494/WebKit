@@ -46,12 +46,12 @@ public:
 
     WebExtensionAPIWebPageRuntime& runtime() const;
     Ref<WebExtensionAPIWebPageRuntime> protectedRuntime() const;
+#endif
     WebExtensionAPITest& test();
 
 private:
     mutable RefPtr<WebExtensionAPIWebPageRuntime> m_runtime;
     RefPtr<WebExtensionAPITest> m_test;
-#endif
 };
 
 } // namespace WebKit

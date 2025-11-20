@@ -167,7 +167,6 @@ set(WebKit_BINDINGS_IN_FILES
     WebProcess/Extensions/Interfaces/WebExtensionAPIStorage
     WebProcess/Extensions/Interfaces/WebExtensionAPIStorageArea
     WebProcess/Extensions/Interfaces/WebExtensionAPITabs
-    WebProcess/Extensions/Interfaces/WebExtensionAPITest
     WebProcess/Extensions/Interfaces/WebExtensionAPIWebNavigation
     WebProcess/Extensions/Interfaces/WebExtensionAPIWebNavigationEvent
     WebProcess/Extensions/Interfaces/WebExtensionAPIWebPageNamespace
@@ -176,6 +175,10 @@ set(WebKit_BINDINGS_IN_FILES
     WebProcess/Extensions/Interfaces/WebExtensionAPIWebRequestEvent
     WebProcess/Extensions/Interfaces/WebExtensionAPIWindows
     WebProcess/Extensions/Interfaces/WebExtensionAPIWindowsEvent
+)
+
+set(WebKit_CPP_BINDINGS_IN_FILES
+    WebProcess/Extensions/Interfaces/WebExtensionAPITest
 )
 
 set(WebKit_MESSAGES_IN_FILES
@@ -889,6 +892,39 @@ macro(GENERATE_MESSAGE_SOURCES _output_source _inputs)
     )
 endmacro()
 GENERATE_MESSAGE_SOURCES(WebKit_DERIVED_SOURCES "${WebKit_MESSAGES_IN_FILES}")
+
+# Helper macro which wraps the bindings script
+#   _output_source is a list name which will contain generated sources.(eg. WebKit_SOURCES)
+#   _inputs are .idl files to generate.
+macro(GENERATE_CPP_IDL_BINDINGS _output_source _inputs)
+    unset(_input_files)
+    unset(_outputs)
+    foreach (_file IN ITEMS ${_inputs})
+        get_filename_component(_name ${_file} NAME_WE)
+        list(APPEND _input_files ${WEBKIT_DIR}/${_file}.idl)
+        list(APPEND _outputs
+            ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.cpp
+
+            ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.h
+        )
+        list(APPEND ${_output_source}
+            ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.cpp
+            ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.h
+        )
+    endforeach ()
+
+    add_custom_command(
+        OUTPUT
+            ${_outputs}
+        MAIN_DEPENDENCY ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl
+        DEPENDS
+            ${_input_files}
+        COMMAND ${PERL_EXECUTABLE} -I "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts" ${WEBCORE_DIR}/bindings/scripts/generate-bindings.pl --outputDir . --generator Extensions --idlAttributesFile "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/IDLAttributes.json" --idlFileNamesList WebExtensionCPPIDLFileNamesList.txt ${_input_files}
+        WORKING_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR}
+        VERBATIM
+    )
+endmacro()
+GENERATE_CPP_IDL_BINDINGS(WebKit_DERIVED_SOURCES "${WebKit_CPP_BINDINGS_IN_FILES}")
 
 # Helper macro which wraps the bindings script
 #   _output_source is a list name which will contain generated sources.(eg. WebKit_SOURCES)

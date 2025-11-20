@@ -100,14 +100,6 @@ JSValueRef WebExtensionCallbackHandler::callbackFunction() const
     return m_callbackFunction;
 }
 
-template<size_t ArgumentCount>
-JSValueRef callWithArguments(JSObjectRef callbackFunction, JSRetainPtr<JSGlobalContextRef>& globalContext, std::array<JSValueRef, ArgumentCount>&& arguments)
-{
-    if (!globalContext || !callbackFunction)
-        return nil;
-    return JSObjectCallAsFunction(globalContext.get(), callbackFunction, nullptr, ArgumentCount, arguments.data(), nullptr);
-}
-
 void WebExtensionCallbackHandler::reportError(const String& message)
 {
     if (!m_globalContext)
@@ -569,6 +561,30 @@ bool isThenable(JSContextRef context, JSValueRef value)
     SUPPRESS_UNCOUNTED_ARG JSValueRef thenableObject = JSObjectGetProperty(context, valueObject, thenableString.get(), nullptr);
 
     return isFunction(context, thenableObject);
+}
+
+template<>
+Vector<JSValueRef> toVector<JSValueRef>(JSContextRef context, JSValueRef value)
+{
+    ASSERT(context);
+
+    if (!value)
+        return { };
+
+    if (!JSValueIsArray(context, value))
+        return { };
+
+    JSObjectRef object = JSValueToObject(context, value, nullptr);
+    // This is a safer cpp false positive (rdar://163760990).
+    SUPPRESS_UNCOUNTED_ARG size_t length = JSValueToInt32(context, JSObjectGetProperty(context, object, toJSString("length"_s).get(), nullptr), nullptr);
+    Vector<JSValueRef> result;
+
+    for (size_t i = 0; i < length; i++) {
+        JSValueRef itemValue = JSObjectGetPropertyAtIndex(context, object, i, nullptr);
+        result.append(itemValue);
+    }
+
+    return result;
 }
 
 } // namespace WebKit
