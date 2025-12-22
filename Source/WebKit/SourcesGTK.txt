@@ -216,6 +216,7 @@ UIProcess/API/gtk/WebKitPrintOperation.cpp @no-unify
 UIProcess/API/gtk/WebKitRemoteInspectorProtocolHandler.cpp @no-unify
 UIProcess/API/gtk/WebKitScriptDialogGtk.cpp @no-unify
 UIProcess/API/gtk/WebKitScriptDialogImpl.cpp @no-unify
+UIProcess/API/gtk/WebKitWebExtensionContextGtk.cpp @no-unify
 UIProcess/API/gtk/WebKitWebInspector.cpp @no-unify
 UIProcess/API/gtk/WebKitWebViewBase.cpp @no-unify
 UIProcess/API/gtk/WebKitWebViewDialog.cpp @no-unify
@@ -232,8 +233,10 @@ UIProcess/Automation/gtk/WebAutomationSessionGtk.cpp @no-unify
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
 UIProcess/Extensions/glib/WebExtensionGLib.cpp
+UIProcess/Extensions/glib/WebExtensionContextGLib.cpp
 
 UIProcess/Extensions/gtk/WebExtensionGTK.cpp
+UIProcess/Extensions/gtk/WebExtensionContextGTK.cpp
 
 UIProcess/Gamepad/gtk/UIGamepadProviderGtk.cpp
 UIProcess/Gamepad/manette/UIGamepadProviderManette.cpp
