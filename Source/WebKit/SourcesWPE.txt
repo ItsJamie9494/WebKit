@@ -213,6 +213,7 @@ UIProcess/API/wpe/WebKitInputMethodContextImplWPE.cpp @no-unify
 UIProcess/API/wpe/WebKitPopupMenu.cpp @no-unify
 UIProcess/API/wpe/WebKitRectangle.cpp @no-unify
 UIProcess/API/wpe/WebKitScriptDialogWPE.cpp @no-unify
+UIProcess/API/wpe/WebKitWebExtensionContextWPE.cpp @no-unify
 UIProcess/API/wpe/WebKitWebViewBackend.cpp @no-unify
 UIProcess/API/wpe/WebKitWebViewWPE1.cpp @no-unify
 UIProcess/API/wpe/WebKitWebViewWPE2.cpp @no-unify
@@ -228,8 +229,10 @@ UIProcess/Automation/glib/BidiBrowserAgentGlib.cpp @no-unify
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
 UIProcess/Extensions/glib/WebExtensionGLib.cpp
+UIProcess/Extensions/glib/WebExtensionContextGLib.cpp
 
 UIProcess/Extensions/wpe/WebExtensionWPE.cpp
+UIProcess/Extensions/wpe/WebExtensionContextWPE.cpp
 
 UIProcess/Gamepad/libwpe/UIGamepadProviderLibWPE.cpp
 

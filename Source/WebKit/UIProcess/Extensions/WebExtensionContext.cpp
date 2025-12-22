@@ -1376,7 +1376,9 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
                 if (!registeredScript)
                     continue;
 
+#if PLATFORM(COCOA)
                 registeredScript->addUserScript(scriptID, userScript);
+#endif
             }
         }
 
@@ -1401,7 +1403,9 @@ void WebExtensionContext::addInjectedContent(const InjectedContentVector& inject
                 if (!registeredScript)
                     continue;
 
+#if PLATFORM(COCOA)
                 registeredScript->addUserStyleSheet(scriptID, userStyleSheet);
+#endif
             }
         }
     }
@@ -1762,6 +1766,26 @@ void WebExtensionContext::loadBackgroundWebViewDuringLoad()
             loadBackgroundWebView();
     } else
         loadBackgroundWebView();
+}
+
+void WebExtensionContext::scheduleBackgroundContentToUnload()
+{
+    if (!m_backgroundWebView || protectedExtension()->backgroundContentIsPersistent())
+        return;
+
+#ifdef NDEBUG
+    static const auto testRunnerDelayBeforeUnloading = 3_s;
+#else
+    static const auto testRunnerDelayBeforeUnloading = 6_s;
+#endif
+
+    static const auto delayBeforeUnloading = isNotRunningInTestRunner() ? 30_s : testRunnerDelayBeforeUnloading;
+
+    RELEASE_LOG_DEBUG(Extensions, "Scheduling background content to unload in %{public}.0f seconds", delayBeforeUnloading.seconds());
+
+    if (!m_unloadBackgroundWebViewTimer)
+        m_unloadBackgroundWebViewTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), "WebExtensionContext::UnloadBackgroundWebViewTimer"_s, this, &WebExtensionContext::unloadBackgroundContentIfPossible);
+    m_unloadBackgroundWebViewTimer->startOneShot(delayBeforeUnloading);
 }
 
 bool WebExtensionContext::isBackgroundPage(WebCore::FrameIdentifier frameIdentifier) const

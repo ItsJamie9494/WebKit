@@ -79,7 +79,9 @@ private:
     WebExtensionDeclarativeNetRequestStorageType m_storageType;
     String m_tableName;
 
+#if PLATFORM(COCOA)
     void migrateData();
+#endif
 };
 
 } // namespace WebKit
