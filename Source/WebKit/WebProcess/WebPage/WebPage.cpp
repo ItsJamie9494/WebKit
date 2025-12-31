@@ -481,7 +481,7 @@
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
 #include "WebExtensionControllerProxy.h"
 #endif
 
@@ -851,7 +851,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     pageConfiguration.deviceOrientationUpdateProvider = WebDeviceOrientationUpdateProvider::create(*this);
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (parameters.webExtensionControllerParameters)
         m_webExtensionController = WebExtensionControllerProxy::getOrCreate(parameters.webExtensionControllerParameters.value(), this);
 #endif
@@ -10289,6 +10289,13 @@ void WebPage::hideCaptionDisplaySettingsPreview(HTMLMediaElementIdentifier ident
 #else
     UNUSED_PARAM(identifier);
 #endif
+}
+#endif
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+RefPtr<WebExtensionControllerProxy> WebPage::protectedWebExtensionControllerProxy() const
+{
+    return webExtensionControllerProxy();
 }
 #endif
 

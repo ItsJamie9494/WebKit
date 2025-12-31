@@ -67,6 +67,7 @@
 #include "WebKitUserContentManagerPrivate.h"
 #include "WebKitUserMessagePrivate.h"
 #include "WebKitWebContextPrivate.h"
+#include "WebKitWebExtensionManagerPrivate.h"
 #include "WebKitWebResourceLoadManager.h"
 #include "WebKitWebResourcePrivate.h"
 #include "WebKitWebViewInternal.h"
@@ -242,6 +243,7 @@ enum {
     PROP_MICROPHONE_CAPTURE_STATE,
     PROP_DISPLAY_CAPTURE_STATE,
 
+    PROP_WEB_EXTENSION_MANAGER,
     PROP_WEB_EXTENSION_MODE,
     PROP_DEFAULT_CONTENT_SECURITY_POLICY,
 
@@ -430,6 +432,10 @@ struct _WebKitWebViewPrivate {
     bool isWebProcessResponsive;
 #if ENABLE(WEBXR) && USE(OPENXR)
     bool isImmersiveModeEnabled;
+#endif
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    GWeakPtr<WebKitWebExtensionManager> weakManager;
 #endif
 };
 
@@ -857,6 +863,9 @@ static Ref<API::PageConfiguration> webkitWebViewCreatePageConfiguration(WebKitWe
 
         pageConfiguration->setCORSDisablingPatterns(context->corsDisablingPatterns());
     }
+
+    if (priv->weakManager)
+        pageConfiguration->setWeakWebExtensionController(webkitWebExtensionManagerToImpl(priv->weakManager.get()).get());
 #endif
 
     if (!priv->defaultContentSecurityPolicy.isNull())
@@ -985,6 +994,8 @@ static void webkitWebViewConstructed(GObject* object)
 
     priv->resourceLoadManager = makeUnique<WebKitWebResourceLoadManager>(webView);
 
+    getPage(webView).setPlatformView(webView);
+
     // The related view is only valid during the construction.
     priv->relatedView = nullptr;
 
@@ -1106,6 +1117,9 @@ static void webkitWebViewSetProperty(GObject* object, guint propId, const GValue
     case PROP_DEFAULT_CONTENT_SECURITY_POLICY:
         webView->priv->defaultContentSecurityPolicy = CString(g_value_get_string(value));
         break;
+    case PROP_WEB_EXTENSION_MANAGER:
+        webView->priv->weakManager = GWeakPtr(WEBKIT_WEB_EXTENSION_MANAGER(g_value_get_object(value)));
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
     }
@@ -1222,6 +1236,9 @@ static void webkitWebViewGetProperty(GObject* object, guint propId, GValue* valu
     }
     case PROP_IS_IMMERSIVE_MODE_ENABLED:
         g_value_set_boolean(value, webkit_web_view_is_immersive_mode_enabled(webView));
+        break;
+    case PROP_WEB_EXTENSION_MANAGER:
+        g_value_set_object(value, webkit_web_view_get_web_extension_manager(webView));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -1786,6 +1803,20 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
         nullptr, nullptr,
         FALSE,
         WEBKIT_PARAM_READABLE);
+
+    /**
+     * WebKitWebView:web-extension-manager:
+     *
+     * The #WebKitWebExtensionManager for this view.
+     *
+     * Since: 2.52
+     */
+    sObjProperties[PROP_WEB_EXTENSION_MANAGER] =
+        g_param_spec_object(
+            "web-extension-manager",
+            nullptr, nullptr,
+            WEBKIT_TYPE_WEB_EXTENSION_MANAGER,
+            static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_properties(gObjectClass, N_PROPERTIES, sObjProperties.data());
 
@@ -5950,6 +5981,28 @@ void webkit_web_view_leave_immersive_mode(WebKitWebView* webView)
     Ref page = getPage(webView);
     if (auto xrSystem = page->xrSystem())
         xrSystem->invalidate(PlatformXRSystem::InvalidationReason::Client);
+#endif
+}
+
+/**
+ * webkit_web_view_get_web_extension_manager:
+ * @web_view: a #WebKitWebView
+ *
+ * Get the #WebKitWebExtensionManager associated to @web_view
+ *
+ * Returns: (transfer none): the #WebKitWebExtensionManager of @web_view
+ */
+WebKitWebExtensionManager* webkit_web_view_get_web_extension_manager(WebKitWebView* webView)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), 0);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    if (!webView->priv->weakManager)
+        return nullptr;
+
+    return webView->priv->weakManager.get();
+#else
+    return nullptr;
 #endif
 }
 

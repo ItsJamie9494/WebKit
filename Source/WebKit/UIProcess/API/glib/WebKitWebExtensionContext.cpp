@@ -402,6 +402,7 @@ enum {
     PROP_BACKEND,
 #endif
     PROP_WEB_EXTENSION,
+    PROP_IS_LOADED,
     PROP_BASE_URI,
     PROP_UNIQUE_IDENTIFIER,
     PROP_IS_INSPECTABLE,
@@ -431,6 +432,8 @@ enum {
     PERMISSION_MATCH_PATTERNS_WERE_DENIED,
     PERMISSION_MATCH_PATTERNS_WERE_GRANTED,
 
+    BACKGROUND_CONTENT_LOAD_FAILED,
+
     LAST_SIGNAL
 };
 
@@ -448,6 +451,9 @@ static void webkitWebExtensionContextGetProperty(GObject* object, guint propId, 
 #endif
     case PROP_WEB_EXTENSION:
         g_value_set_object(value, webkit_web_extension_context_get_web_extension(context));
+        break;
+    case PROP_IS_LOADED:
+        g_value_set_boolean(value, webkit_web_extension_context_get_is_loaded(context));
         break;
     case PROP_BASE_URI:
         g_value_set_string(value, webkit_web_extension_context_get_base_uri(context));
@@ -573,6 +579,22 @@ static void webkit_web_extension_context_class_init(WebKitWebExtensionContextCla
             nullptr, nullptr,
             WEBKIT_TYPE_WEB_EXTENSION,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)
+        );
+
+    /**
+     * WebKitWebExtensionContext:is-loaded:
+     * 
+     * Whether this #WebKitWebExtensionContext has been loaded in a #WebKitWebExtensionManager.
+     * See webkit_web_extension_context_get_is_loaded() for more details.
+     * 
+     * Since: 2.52
+     */
+    properties[PROP_IS_LOADED] =
+        g_param_spec_boolean(
+            "is-loaded",
+            nullptr, nullptr,
+            false,
+            WEBKIT_PARAM_READABLE
         );
 
     /**
@@ -932,6 +954,33 @@ static void webkit_web_extension_context_class_init(WebKitWebExtensionContextCla
             0, 0, 0,
             g_cclosure_marshal_VOID__VOID,
             G_TYPE_NONE, 0);
+
+    /**
+     * WebKitWebExtensionContext::background-content-load-failed:
+     * @context: the #WebKitWebExtensionContext
+     * @error: the #GError that was triggered
+     *
+     * This signal is emitted whenever the background content failed to load.
+     * If no background content is available yet background content attempted
+     * to load, @error will be WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_NO_BACKGROUND_CONTENT,
+     * otherwise @error will be WEBKIT_WEB_EXTENSION_CONTEXT_ERROR_BACKGROUND_CONTENT_FAILED_TO_LOAD.
+     *
+     * Since: 2.52
+     */
+    signals[BACKGROUND_CONTENT_LOAD_FAILED] =
+        g_signal_new("background-content-load-failed",
+            G_TYPE_FROM_CLASS(objectClass),
+            G_SIGNAL_RUN_LAST,
+            0, 0, 0,
+            g_cclosure_marshal_generic,
+            G_TYPE_NONE, 1,
+            G_TYPE_ERROR | G_SIGNAL_TYPE_STATIC_SCOPE);
+}
+
+RefPtr<WebExtensionContext> webkitWebExtensionContextGetInternalContext(WebKitWebExtensionContext* context)
+{
+    return context->priv->context;
+}
 }
 
 static gboolean webkitWebExtensionContextInitableInit(GInitable* initable, GCancellable* cancellable, GError** error)
@@ -957,6 +1006,7 @@ static gboolean webkitWebExtensionContextInitableInit(GInitable* initable, GCanc
     }
 
     self->priv->context = WTF::move(context);
+    self->priv->context->setWrapper(self);
     g_object_weak_ref(G_OBJECT(self->priv->extension.get()), +[](gpointer userData, GObject*) {
         WebKitWebExtensionContext* context = WEBKIT_WEB_EXTENSION_CONTEXT(userData);
         context->priv->extension = nullptr;
@@ -1017,6 +1067,24 @@ WebKitWebExtension* webkit_web_extension_context_get_web_extension(WebKitWebExte
     g_return_val_if_fail(WEBKIT_IS_WEB_EXTENSION_CONTEXT(context), nullptr);
 
     return context->priv->extension.get();
+}
+
+/**
+ * webkit_web_extension_context_get_is_loaded:
+ * @context: a #WebKitWebExtensionContext
+ *
+ * Get whether @context is currently loaded in a #WebKitWebExtensionManager.
+ * To load a #WebKitWebExtensionContext in a #WebKitWebExtensionManager, see webkit_web_extension_manager_load_extension_context().
+ * 
+ * Returns: %TRUE if @context is loaded in a #WebKitWebExtensionManager
+ * 
+ * Since: 2.52
+ */
+gboolean webkit_web_extension_context_get_is_loaded(WebKitWebExtensionContext *context)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEB_EXTENSION_CONTEXT(context), false);
+
+    return context->priv->context->isLoaded();
 }
 
 /**

@@ -382,25 +382,6 @@ Expected<bool, RefPtr<API::Error>> WebExtensionContext::unload()
     return true;
 }
 
-Expected<bool, RefPtr<API::Error>> WebExtensionContext::reload()
-{
-    if (!isLoaded()) {
-        RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
-        return makeUnexpected(createError(Error::NotLoaded));
-    }
-
-    Ref controller = *m_extensionController;
-    auto unloadResult = controller->unload(*this);
-    if (!unloadResult)
-        return makeUnexpected(unloadResult.error());
-
-    auto loadResult = controller->load(*this);
-    if (!loadResult)
-        return makeUnexpected(loadResult.error());
-
-    return true;
-}
-
 NSDictionary *WebExtensionContext::currentState() const
 {
     return [m_state copy];
@@ -2370,19 +2351,6 @@ WKWebViewConfiguration *WebExtensionContext::webViewConfiguration(WebViewPurpose
     return configuration;
 }
 
-WebsiteDataStore* WebExtensionContext::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
-{
-    RefPtr extensionController = this->extensionController();
-    if (!extensionController)
-        return nullptr;
-
-    RefPtr result = extensionController->websiteDataStore(sessionID);
-    if (result && !result->isPersistent() && !hasAccessToPrivateData())
-        return nullptr;
-
-    return result.unsafeGet();
-}
-
 void WebExtensionContext::cookiesDidChange(API::HTTPCookieStore&)
 {
     // FIXME: <https://webkit.org/b/267514> Add support for changeInfo.
@@ -2393,21 +2361,6 @@ void WebExtensionContext::cookiesDidChange(API::HTTPCookieStore&)
 bool WebExtensionContext::isBackgroundPage(WebPageProxyIdentifier pageProxyIdentifier) const
 {
     return m_backgroundWebView && m_backgroundWebView.get()._page->identifier() == pageProxyIdentifier;
-}
-
-bool WebExtensionContext::backgroundContentIsLoaded() const
-{
-    return m_backgroundWebView && m_backgroundContentIsLoaded && m_actionsToPerformAfterBackgroundContentLoads.isEmpty();
-}
-
-void WebExtensionContext::loadBackgroundWebViewIfNeeded()
-{
-    ASSERT(isLoaded());
-
-    if (!protectedExtension()->hasBackgroundContent() || m_backgroundWebView || !safeToLoadBackgroundContent())
-        return;
-
-    loadBackgroundWebView();
 }
 
 void WebExtensionContext::loadBackgroundWebView()
@@ -3090,17 +3043,6 @@ String WebExtensionContext::declarativeNetRequestContentRuleListFilePath()
     return m_declarativeNetRequestContentRuleListFilePath;
 }
 
-void WebExtensionContext::removeDeclarativeNetRequestRules()
-{
-    if (!isLoaded())
-        return;
-
-    // Use all user content controllers in case the extension was briefly allowed in private browsing
-    // and content was injected into any of those content controllers.
-    for (Ref userContentController : extensionController()->allUserContentControllers())
-        userContentController->removeContentRuleList(uniqueIdentifier());
-}
-
 static NSString *computeStringHashForContentBlockerRules(NSString *rules)
 {
     SHA1 sha1;
@@ -3286,144 +3228,6 @@ void WebExtensionContext::setSessionStorageAllowedInContentScripts(bool allowed)
 
     if (RefPtr extensionController = this->extensionController())
         extensionController->sendToAllProcesses(Messages::WebExtensionContextProxy::SetStorageAccessLevel(allowed), identifier());
-}
-
-void WebExtensionContext::sendTestMessage(const String& message, id argument)
-{
-    ASSERT(isLoaded() && inTestingMode());
-    if (!isLoaded() || !inTestingMode())
-        return;
-
-    constexpr auto eventType = WebExtensionEventListenerType::TestOnMessage;
-
-    if (!hasTestEventListeners(eventType)) {
-        addTestMessageToQueue(message, argument, eventType);
-        return;
-    }
-
-    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
-
-    sendToProcesses(processes(eventType, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argumentJSON, WebExtensionContentWorldType::WebPage));
-
-    sendToContentScriptProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argumentJSON, WebExtensionContentWorldType::ContentScript));
-
-    wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
-        sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argumentJSON, WebExtensionContentWorldType::Main));
-    });
-}
-
-void WebExtensionContext::sendTestStarted(id argument)
-{
-    ASSERT(isLoaded() && inTestingMode());
-    if (!isLoaded() || !inTestingMode())
-        return;
-
-    constexpr auto type = WebExtensionEventListenerType::TestOnTestStarted;
-
-    if (!hasTestEventListeners(type)) {
-        addTestMessageToQueue(nullString(), argument, type);
-        return;
-    }
-
-    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
-
-    sendToProcesses(processes(type, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argumentJSON, WebExtensionContentWorldType::WebPage));
-
-    sendToContentScriptProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argumentJSON, WebExtensionContentWorldType::ContentScript));
-
-    wakeUpBackgroundContentIfNecessaryToFireEvents({ type }, [=, this, protectedThis = Ref { *this }] {
-        sendToProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argumentJSON, WebExtensionContentWorldType::Main));
-    });
-}
-
-void WebExtensionContext::sendTestFinished(id argument)
-{
-    ASSERT(isLoaded() && inTestingMode());
-    if (!isLoaded() || !inTestingMode())
-        return;
-
-    constexpr auto type = WebExtensionEventListenerType::TestOnTestFinished;
-
-    if (!hasTestEventListeners(type)) {
-        addTestMessageToQueue(nullString(), argument, type);
-        return;
-    }
-
-    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
-
-    sendToProcesses(processes(type, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argumentJSON, WebExtensionContentWorldType::WebPage));
-
-    sendToContentScriptProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argumentJSON, WebExtensionContentWorldType::ContentScript));
-
-    wakeUpBackgroundContentIfNecessaryToFireEvents({ type }, [=, this, protectedThis = Ref { *this }] {
-        sendToProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argumentJSON, WebExtensionContentWorldType::Main));
-    });
-}
-
-void WebExtensionContext::addTestMessageToQueue(const String& message, id argument, WebExtensionEventListenerType type)
-{
-    switch (type) {
-    case WebExtensionEventListenerType::TestOnMessage:
-        m_testMessageQueue.append({ message, argument });
-        break;
-
-    case WebExtensionEventListenerType::TestOnTestStarted:
-        m_testStartedQueue.append({ message, argument });
-        break;
-
-    case WebExtensionEventListenerType::TestOnTestFinished:
-        m_testFinishedQueue.append({ message, argument });
-        break;
-
-    default:
-        ASSERT_NOT_REACHED();
-        return;
-    }
-}
-
-void WebExtensionContext::sendQueuedTestMessagesIfNeeded(WebExtensionEventListenerType type)
-{
-    switch (type) {
-    case WebExtensionEventListenerType::TestOnMessage:
-        while (!m_testMessageQueue.isEmpty()) {
-            const auto& testMessage = m_testMessageQueue.takeFirst();
-            sendTestMessage(testMessage.message, testMessage.argument.get());
-        }
-        break;
-
-    case WebExtensionEventListenerType::TestOnTestStarted:
-        while (!m_testStartedQueue.isEmpty()) {
-            const auto& testMessage = m_testStartedQueue.takeFirst();
-            sendTestStarted(testMessage.argument.get());
-        }
-        break;
-
-    case WebExtensionEventListenerType::TestOnTestFinished:
-        while (!m_testFinishedQueue.isEmpty()) {
-            const auto& testMessage = m_testFinishedQueue.takeFirst();
-            sendTestFinished(testMessage.argument.get());
-        }
-        break;
-
-    default:
-        ASSERT_NOT_REACHED();
-        return;
-    }
-}
-
-bool WebExtensionContext::hasTestEventListeners(WebExtensionEventListenerType type)
-{
-    switch (type) {
-    case WebExtensionEventListenerType::TestOnMessage:
-        return m_testMessageListenersCount;
-    case WebExtensionEventListenerType::TestOnTestStarted:
-        return m_testStartedListenersCount;
-    case WebExtensionEventListenerType::TestOnTestFinished:
-        return m_testFinishedListenersCount;
-
-    default:
-        return false;
-    }
 }
 
 } // namespace WebKit

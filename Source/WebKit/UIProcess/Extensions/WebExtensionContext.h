@@ -103,6 +103,8 @@
 #include "WebKitWebExtensionContext.h"
 #include "WebKitWebView.h"
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/GUniquePtr.h>
+#include <wtf/glib/GWeakPtr.h>
 #endif
 
 #if USE(GLIB)
@@ -194,7 +196,7 @@ public:
 #if PLATFORM(COCOA)
     static NSMutableDictionary *readStateFromPath(const String&);
 #else
-    static GRefPtr<GKeyFile> readStateFromPath(const String&);
+    static GKeyFile *readStateFromPath(const String&);
 #endif
     static bool readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL);
     static bool readDisplayNameFromState(const String& filePath, String& outDisplayName);
@@ -699,11 +701,27 @@ public:
     WKWebExtensionContext *wrapper() const { return (WKWebExtensionContext *)API::ObjectImpl<API::Object::Type::WebExtensionContext>::wrapper(); }
 #endif
 
+#if PLATFORM(GTK)
+    void setWrapper(WebKitWebExtensionContext *extension)
+    {
+        m_wrapper = GWeakPtr(extension);
+    }
+
+    WebKitWebExtensionContext *wrapper() const
+    {
+        return m_wrapper.get();
+    }
+#endif
+
 private:
     friend class WebExtensionCommand;
     friend class WebExtensionMessagePort;
 
     explicit WebExtensionContext();
+
+#if PLATFORM(GTK)
+    GWeakPtr<WebKitWebExtensionContext> m_wrapper;
+#endif
 
     int toAPIError(WebExtensionContext::Error);
 
@@ -712,8 +730,8 @@ private:
     NSDictionary *currentState() const;
     NSDictionary *readStateFromStorage();
 #else
-    GRefPtr<GKeyFile> currentState() const;
-    GRefPtr<GKeyFile> readStateFromStorage();
+    GKeyFile *currentState() const;
+    const GKeyFile *readStateFromStorage();
 #endif
     void writeStateToStorage() const;
 
@@ -1052,10 +1070,8 @@ private:
     // webRequest support.
     bool hasPermissionToSendWebRequestEvent(WebExtensionTab*, const URL& resourceURL, const ResourceLoadInfo&);
 
-#if PLATFORM(COCOA)
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-#endif
 
     bool isLoaded(IPC::Decoder&) const { return isLoaded(); }
     bool isLoadedAndPrivilegedMessage(IPC::Decoder& message) const { return isLoaded() && isPrivilegedMessage(message); }
@@ -1068,7 +1084,7 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<NSMutableDictionary> m_state;
 #else
-    GRefPtr<GKeyFile> m_state;
+    GUniquePtr<GKeyFile> m_state;
 #endif
     Vector<Ref<API::Error>> m_errors;
 

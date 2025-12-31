@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,15 +19,12 @@
 
 #pragma once
 
-#include "WebResourceLoadStatisticsStore.h"
-#include "WebsiteDataStore.h"
-#include <wtf/glib/GUniquePtr.h>
-#include <wtf/text/CString.h>
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-#if ENABLE(2022_GLIB_API)
-WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(CString&&, CString&&);
-WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(Ref<WebKit::WebsiteDataStore>);
-#endif
-WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteDataManager*);
+#include "WebExtensionController.h"
+#include "WebKitWebExtensionManager.h"
+#include <wtf/RefPtr.h>
 
-WebKitITPThirdParty* webkitITPThirdPartyCreate(WebKit::ITPThirdPartyData&&);
+RefPtr<WebKit::WebExtensionController> webkitWebExtensionManagerToImpl(WebKitWebExtensionManager*);
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

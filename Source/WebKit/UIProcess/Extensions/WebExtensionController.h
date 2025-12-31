@@ -50,6 +50,12 @@
 #include <wtf/URLHash.h>
 #include <wtf/WeakHashSet.h>
 
+#if USE(GLIB)
+#include "WebKitWebExtensionManager.h"
+#include "WebKitWebExtensionManagerDelegatePrivate.h"
+#include "WebKitWebExtensionManagerInternal.h"
+#endif
+
 OBJC_CLASS NSMenu;
 OBJC_CLASS _WKWebExtensionControllerHelper;
 OBJC_PROTOCOL(WKWebExtensionControllerDelegatePrivate);
@@ -200,6 +206,20 @@ public:
     WKWebExtensionControllerDelegatePrivate *delegate() const { return (WKWebExtensionControllerDelegatePrivate *)protectedWrapper().get().delegate; }
 #endif
 
+#if USE(GLIB)
+    void setWrapper(WebKitWebExtensionManager *manager)
+    {
+        m_wrapper = GWeakPtr(manager);
+    }
+
+    WebKitWebExtensionManager *wrapper() const
+    {
+        return m_wrapper.get();
+    }
+
+    WebExtensionManagerDelegate *delegate() const { return webkitWebExtensionManagerGetPrivateDelegate(wrapper()); }
+#endif
+
 private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
@@ -271,6 +291,10 @@ private:
     RefPtr<HTTPCookieStoreObserver> protectedCookieStoreObserver() { return m_cookieStoreObserver; }
 
     const Ref<WebExtensionControllerConfiguration> m_configuration;
+
+#if USE(GLIB)
+    GWeakPtr<WebKitWebExtensionManager> m_wrapper;
+#endif
 
 #if PLATFORM(COCOA)
     RetainPtr<_WKWebExtensionControllerHelper> m_webExtensionControllerHelper;

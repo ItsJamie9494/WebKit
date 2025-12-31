@@ -238,6 +238,8 @@ UIProcess/Extensions/glib/WebExtensionURLSchemeHandlerGLib.cpp
 
 UIProcess/Extensions/gtk/WebExtensionGTK.cpp
 UIProcess/Extensions/gtk/WebExtensionContextGTK.cpp
+UIProcess/Extensions/gtk/WebExtensionControllerGtk.cpp
+UIProcess/Extensions/gtk/WebExtensionControllerConfigurationGtk.cpp
 
 UIProcess/Gamepad/gtk/UIGamepadProviderGtk.cpp
 UIProcess/Gamepad/manette/UIGamepadProviderManette.cpp

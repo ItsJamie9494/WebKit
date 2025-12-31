@@ -108,6 +108,7 @@ void WebExtensionContext::loadBackgroundWebView()
         "web-extension-mode", isManifestVersion3 ? WEBKIT_WEB_EXTENSION_MODE_MANIFESTV3 : WEBKIT_WEB_EXTENSION_MODE_MANIFESTV2,
         "related-view", preferences->siteIsolationEnabled() ? nullptr : relatedWebView(),
         "settings", settings,
+        "web-extension-manager", extensionController->wrapper(),
         nullptr));
     m_backgroundWebView = webView;
 
@@ -129,6 +130,8 @@ void WebExtensionContext::loadBackgroundWebView()
     m_backgroundWebViewActivity = backgroundProcess->protectedThrottler()->foregroundActivity("Web Extension background content"_s);
 
     if (!protectedExtension()->backgroundContentIsServiceWorker()) {
+        backgroundProcess->send(Messages::WebExtensionContextProxy::SetBackgroundPageIdentifier(pageProxy->webPageIDInMainFrameProcess()), identifier());
+
         webkit_web_view_load_request(m_backgroundWebView.get(), webkit_uri_request_new(backgroundContentURL().string().utf8().data()));
         return;
     }

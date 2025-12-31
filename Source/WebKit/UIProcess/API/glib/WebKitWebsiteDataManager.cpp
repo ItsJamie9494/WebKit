@@ -576,6 +576,13 @@ WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(CString&& baseDataDirec
     manager->priv->baseCacheDirectory = WTFMove(baseCacheDirectory);
     return manager;
 }
+
+WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(Ref<WebsiteDataStore> websiteDataStore)
+{
+    auto* manager = WEBKIT_WEBSITE_DATA_MANAGER(g_object_new(WEBKIT_TYPE_WEBSITE_DATA_MANAGER, nullptr));
+    manager->priv->websiteDataStore = websiteDataStore.get();
+    return manager;
+}
 #else
 /**
  * webkit_website_data_manager_new:

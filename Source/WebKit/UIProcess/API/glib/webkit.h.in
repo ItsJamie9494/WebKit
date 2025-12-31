@@ -126,6 +126,8 @@
 #if ENABLE(2022_GLIB_API)
 #include <@API_INCLUDE_PREFIX@/WebKitWebExtension.h>
 #include <@API_INCLUDE_PREFIX@/WebKitWebExtensionContext.h>
+#include <@API_INCLUDE_PREFIX@/WebKitWebExtensionManager.h>
+#endif
 #include <@API_INCLUDE_PREFIX@/WebKitWebExtensionMatchPattern.h>
 #endif
 #if PLATFORM(GTK)

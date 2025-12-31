@@ -34,8 +34,15 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/UUID.h>
 
-OBJC_CLASS WKWebExtensionControllerConfiguration;
+#if PLATFORM(COCOA)
 OBJC_CLASS WKWebViewConfiguration;
+using WebViewConfiguration = WKWebViewConfiguration;
+#else
+#include "WebKitSettings.h"
+using WebViewConfiguration = WebKitSettings;
+#endif
+
+OBJC_CLASS WKWebExtensionControllerConfiguration;
 
 namespace WebKit {
 
@@ -65,10 +72,8 @@ public:
     const String& storageDirectory() const { return m_storageDirectory; }
     void setStorageDirectory(const String& directory) { m_storageDirectory = directory; }
 
-#if PLATFORM(COCOA)
-    WKWebViewConfiguration *webViewConfiguration();
-    void setWebViewConfiguration(WKWebViewConfiguration *configuration) { m_webViewConfiguration = configuration; }
-#endif
+    WebViewConfiguration *webViewConfiguration();
+    void setWebViewConfiguration(WebViewConfiguration *configuration) { m_webViewConfiguration = configuration; }
 
     WebsiteDataStore& defaultWebsiteDataStore() const;
     Ref<WebsiteDataStore> protectedDefaultWebsiteDataStore() const { return defaultWebsiteDataStore(); }
@@ -81,7 +86,7 @@ public:
 #endif
 
 private:
-    static String createStorageDirectoryPath(std::optional<WTF::UUID> = std::nullopt);
+    String createStorageDirectoryPath(std::optional<WTF::UUID> = std::nullopt);
     static String createTemporaryStorageDirectoryPath();
 
     Markable<WTF::UUID> m_identifier;
@@ -89,6 +94,8 @@ private:
     String m_storageDirectory;
 #if PLATFORM(COCOA)
     RetainPtr<WKWebViewConfiguration> m_webViewConfiguration;
+#else
+    GRefPtr<WebKitSettings> m_webViewConfiguration;
 #endif
     RefPtr<WebsiteDataStore> m_defaultWebsiteDataStore;
 };

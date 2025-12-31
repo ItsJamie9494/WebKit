@@ -432,7 +432,7 @@
 #include "DrawingAreaProxyCoordinatedGraphics.h"
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
 #include "WebExtensionController.h"
 #endif
 
@@ -836,7 +836,7 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     , m_pageGroup(*configuration->pageGroup())
     , m_preferences(configuration->preferences())
     , m_userContentController(configuration->userContentController())
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     , m_webExtensionController(configuration->webExtensionController())
     , m_weakWebExtensionController(configuration->weakWebExtensionController())
 #endif
@@ -902,7 +902,7 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
 
     protectedPreferences()->addPage(*this);
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr webExtensionController = this->webExtensionController())
         webExtensionController->addPage(*this);
 #endif
@@ -1063,7 +1063,7 @@ bool WebPageProxy::modelElementEnabled()
     return protectedPreferences()->modelElementEnabled();
 }
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
 WebExtensionController* WebPageProxy::webExtensionController()
 {
     return m_webExtensionController.get() ?: m_weakWebExtensionController.get();
@@ -1810,7 +1810,7 @@ void WebPageProxy::close()
         fullscreenManager->detachFromClient();
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr webExtensionController = m_webExtensionController)
         webExtensionController->removePage(*this);
     if (RefPtr webExtensionController = m_weakWebExtensionController.get())
@@ -12216,7 +12216,7 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     parameters.hasResourceLoadClient = !!m_resourceLoadClient;
     parameters.portsForUpgradingInsecureSchemeForTesting = m_configuration->portsForUpgradingInsecureSchemeForTesting();
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr webExtensionController = m_webExtensionController)
         parameters.webExtensionControllerParameters = webExtensionController->parameters(m_configuration);
 

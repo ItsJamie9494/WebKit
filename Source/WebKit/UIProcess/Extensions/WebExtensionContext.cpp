@@ -116,6 +116,25 @@ Vector<Ref<API::Error>> WebExtensionContext::errors()
     return array;
 }
 
+Expected<bool, RefPtr<API::Error>> WebExtensionContext::reload()
+{
+    if (!isLoaded()) {
+        RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
+        return makeUnexpected(createError(Error::NotLoaded));
+    }
+
+    Ref controller = *m_extensionController;
+    auto unloadResult = controller->unload(*this);
+    if (!unloadResult)
+        return makeUnexpected(unloadResult.error());
+
+    auto loadResult = controller->load(*this);
+    if (!loadResult)
+        return makeUnexpected(loadResult.error());
+
+    return true;
+}
+
 String WebExtensionContext::stateFilePath() const
 {
     if (!storageIsPersistent())
@@ -1644,8 +1663,13 @@ WebExtensionContextParameters WebExtensionContext::parameters(IncludePrivilegedI
         inspectorPageIdentifiers(),
         inspectorBackgroundPageIdentifiers(),
 #endif
+#if PLATFORM(COCOA)
         popupPageIdentifiers(),
         tabPageIdentifiers()
+#else
+        Vector<WebExtensionContext::PageIdentifierTuple>({ }),
+        Vector<WebExtensionContext::PageIdentifierTuple>({ })
+#endif
     };
 }
 
@@ -1726,6 +1750,19 @@ Vector<String> WebExtensionContext::corsDisablingPatterns()
     return patterns;
 }
 
+WebsiteDataStore* WebExtensionContext::websiteDataStore(std::optional<PAL::SessionID> sessionID) const
+{
+    RefPtr extensionController = this->extensionController();
+    if (!extensionController)
+        return nullptr;
+
+    RefPtr result = extensionController->websiteDataStore(sessionID);
+    if (result && !result->isPersistent() && !hasAccessToPrivateData())
+        return nullptr;
+
+    return result.get();
+}
+
 URL WebExtensionContext::backgroundContentURL()
 {
     RefPtr extension = m_extension;
@@ -1746,6 +1783,21 @@ void WebExtensionContext::loadBackgroundContent(CompletionHandler<void(RefPtr<AP
         if (completionHandler)
             completionHandler(backgroundContentLoadError());
     });
+}
+
+bool WebExtensionContext::backgroundContentIsLoaded() const
+{
+    return m_backgroundWebView && m_backgroundContentIsLoaded && m_actionsToPerformAfterBackgroundContentLoads.isEmpty();
+}
+
+void WebExtensionContext::loadBackgroundWebViewIfNeeded()
+{
+    ASSERT(isLoaded());
+
+    if (!protectedExtension()->hasBackgroundContent() || m_backgroundWebView || !safeToLoadBackgroundContent())
+        return;
+
+    loadBackgroundWebView();
 }
 
 void WebExtensionContext::loadBackgroundWebViewDuringLoad()
@@ -1885,6 +1937,17 @@ RefPtr<WebInspectorUIProxy> WebExtensionContext::inspector(const API::InspectorE
 }
 #endif // ENABLE(INSPECTOR_EXTENSIONS)
 
+void WebExtensionContext::removeDeclarativeNetRequestRules()
+{
+    if (!isLoaded())
+        return;
+
+    // Use all user content controllers in case the extension was briefly allowed in private browsing
+    // and content was injected into any of those content controllers.
+    for (Ref userContentController : extensionController()->allUserContentControllers())
+        userContentController->removeContentRuleList(uniqueIdentifier());
+}
+
 size_t WebExtensionContext::quotaForStorageType(WebExtensionDataType storageType)
 {
     switch (storageType) {
@@ -1940,6 +2003,138 @@ Ref<WebExtensionRegisteredScriptsSQLiteStore> WebExtensionContext::registeredCon
     if (!m_registeredContentScriptsStorage)
         m_registeredContentScriptsStorage = WebExtensionRegisteredScriptsSQLiteStore::create(m_uniqueIdentifier, storageDirectory(), !storageIsPersistent());
     return *m_registeredContentScriptsStorage;
+}
+
+void WebExtensionContext::sendTestMessage(const String& message, const String& argument)
+{
+    ASSERT(isLoaded() && inTestingMode());
+    if (!isLoaded() || !inTestingMode())
+        return;
+
+    constexpr auto eventType = WebExtensionEventListenerType::TestOnMessage;
+
+    if (!hasTestEventListeners(eventType)) {
+        addTestMessageToQueue(message, argument, eventType);
+        return;
+    }
+
+    sendToProcesses(processes(eventType, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argument, WebExtensionContentWorldType::WebPage));
+
+    sendToContentScriptProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argument, WebExtensionContentWorldType::ContentScript));
+
+    wakeUpBackgroundContentIfNecessaryToFireEvents({ eventType }, [=, this, protectedThis = Ref { *this }] {
+        sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchTestMessageEvent(message, argument, WebExtensionContentWorldType::Main));
+    });
+}
+
+void WebExtensionContext::sendTestStarted(const String& argument)
+{
+    ASSERT(isLoaded() && inTestingMode());
+    if (!isLoaded() || !inTestingMode())
+        return;
+
+    constexpr auto type = WebExtensionEventListenerType::TestOnTestStarted;
+
+    if (!hasTestEventListeners(type)) {
+        addTestMessageToQueue(nullString(), argument, type);
+        return;
+    }
+
+    sendToProcesses(processes(type, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argument, WebExtensionContentWorldType::WebPage));
+
+    sendToContentScriptProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argument, WebExtensionContentWorldType::ContentScript));
+
+    wakeUpBackgroundContentIfNecessaryToFireEvents({ type }, [=, this, protectedThis = Ref { *this }] {
+        sendToProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestStartedEvent(argument, WebExtensionContentWorldType::Main));
+    });
+}
+
+void WebExtensionContext::sendTestFinished(const String& argument)
+{
+    ASSERT(isLoaded() && inTestingMode());
+    if (!isLoaded() || !inTestingMode())
+        return;
+
+    constexpr auto type = WebExtensionEventListenerType::TestOnTestFinished;
+
+    if (!hasTestEventListeners(type)) {
+        addTestMessageToQueue(nullString(), argument, type);
+        return;
+    }
+
+    sendToProcesses(processes(type, WebExtensionContentWorldType::WebPage), Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argument, WebExtensionContentWorldType::WebPage));
+
+    sendToContentScriptProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argument, WebExtensionContentWorldType::ContentScript));
+
+    wakeUpBackgroundContentIfNecessaryToFireEvents({ type }, [=, this, protectedThis = Ref { *this }] {
+        sendToProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchTestFinishedEvent(argument, WebExtensionContentWorldType::Main));
+    });
+}
+
+void WebExtensionContext::addTestMessageToQueue(const String& message, const String& argument, WebExtensionEventListenerType type)
+{
+    switch (type) {
+    case WebExtensionEventListenerType::TestOnMessage:
+        m_testMessageQueue.append({ message, argument });
+        break;
+
+    case WebExtensionEventListenerType::TestOnTestStarted:
+        m_testStartedQueue.append({ message, argument });
+        break;
+
+    case WebExtensionEventListenerType::TestOnTestFinished:
+        m_testFinishedQueue.append({ message, argument });
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+}
+
+void WebExtensionContext::sendQueuedTestMessagesIfNeeded(WebExtensionEventListenerType type)
+{
+    switch (type) {
+    case WebExtensionEventListenerType::TestOnMessage:
+        while (!m_testMessageQueue.isEmpty()) {
+            const auto& testMessage = m_testMessageQueue.takeFirst();
+            sendTestMessage(testMessage.message, testMessage.argument);
+        }
+        break;
+
+    case WebExtensionEventListenerType::TestOnTestStarted:
+        while (!m_testStartedQueue.isEmpty()) {
+            const auto& testMessage = m_testStartedQueue.takeFirst();
+            sendTestStarted(testMessage.argument);
+        }
+        break;
+
+    case WebExtensionEventListenerType::TestOnTestFinished:
+        while (!m_testFinishedQueue.isEmpty()) {
+            const auto& testMessage = m_testFinishedQueue.takeFirst();
+            sendTestFinished(testMessage.argument);
+        }
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+}
+
+bool WebExtensionContext::hasTestEventListeners(WebExtensionEventListenerType type)
+{
+    switch (type) {
+    case WebExtensionEventListenerType::TestOnMessage:
+        return m_testMessageListenersCount;
+    case WebExtensionEventListenerType::TestOnTestStarted:
+        return m_testStartedListenersCount;
+    case WebExtensionEventListenerType::TestOnTestFinished:
+        return m_testFinishedListenersCount;
+
+    default:
+        return false;
+    }
 }
 
 } // namespace WebKit

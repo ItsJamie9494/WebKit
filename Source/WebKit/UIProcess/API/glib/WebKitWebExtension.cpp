@@ -470,6 +470,7 @@ static gboolean webkitWebExtensionInitableInit(GInitable* initable, GCancellable
         return FALSE;
     }
 
+    extension->setWrapper(self);
     self->priv->extension = WTFMove(extension);
 
     return TRUE;
@@ -484,6 +485,11 @@ static void gInitableInterfaceInit(GInitableIface* iface)
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS)
+
+RefPtr<WebKit::WebExtension> webkitWebExtensionGetInternalExtension(WebKitWebExtension* extension)
+{
+    return extension->priv->extension;
+}
 
 WebKitWebExtension* webkitWebExtensionCreate(HashMap<String, GRefPtr<GBytes>>&& resources, GError** error)
 {
@@ -500,6 +506,7 @@ WebKitWebExtension* webkitWebExtensionCreate(HashMap<String, GRefPtr<GBytes>>&& 
     }
 
     WebKitWebExtension* object = WEBKIT_WEB_EXTENSION(g_object_new(WEBKIT_TYPE_WEB_EXTENSION, nullptr));
+    extension->setWrapper(object);
     object->priv->extension = WTFMove(extension);
     return object;
 }

@@ -20,15 +20,18 @@
 #include "config.h"
 #include "WebExtensionContext.h"
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+
+#include "WebExtensionContextProxyMessages.h"
 #include "WebExtensionPermission.h"
 #include "WebKitEnumTypes.h"
 #include "WebKitNavigationActionPrivate.h"
+#include "WebKitPrivate.h"
 #include "WebKitSettingsPrivate.h"
+#include "WebKitWebView.h"
 #include "WebKitWebViewPrivate.h"
 #include "WebKitWebsiteDataManagerPrivate.h"
 #include <wtf/URL.h>
-
-#if ENABLE(WK_WEB_EXTENSIONS)
 
 static constexpr auto groupNameStateKey = "ExtensionState"_s;
 static constexpr auto backgroundContentEventListenersKey = "BackgroundContentEventListeners"_s;
@@ -83,26 +86,143 @@ void WebExtensionContext::clearError(Error error)
     });
 }
 
-GRefPtr<GKeyFile> WebExtensionContext::currentState() const
+Expected<bool, RefPtr<API::Error>> WebExtensionContext::load(WebExtensionController& controller, String storageDirectory)
 {
-    return m_state;
+    if (isLoaded()) {
+        RELEASE_LOG_ERROR(Extensions, "Extension context already loaded");
+        return makeUnexpected(createError(Error::AlreadyLoaded));
+    }
+
+    m_storageDirectory = storageDirectory;
+    m_extensionController = controller;
+    m_contentScriptWorld = API::ContentWorld::sharedWorldWithName(makeString("WebExtension-"_s, m_uniqueIdentifier));
+
+    readStateFromStorage();
+
+    auto lastSeenBaseURL = URL { String::fromUTF8(g_key_file_get_string(m_state.get(), groupNameStateKey, lastSeenBaseURLStateKey, nullptr)) };
+    g_key_file_set_string(m_state.get(), groupNameStateKey, lastSeenBaseURLStateKey, m_baseURL.string().utf8().data());
+    g_key_file_set_string(m_state.get(), groupNameStateKey, lastSeenDisplayNameStateKey, protectedExtension()->displayName().utf8().data());
+
+    m_isSessionStorageAllowedInContentScripts = g_key_file_get_boolean(m_state.get(), groupNameStateKey, sessionStorageAllowedInContentScriptsKey, nullptr);
+
+    determineInstallReasonDuringLoad();
+
+    writeStateToStorage();
+
+    moveLocalStorageIfNeeded(lastSeenBaseURL, [this, protectedThis = Ref { *this }] {
+        // The extension could have been unloaded before this was called.
+        if (!isLoaded())
+            return;
+
+        m_safeToInjectContent = true;
+
+        loadBackgroundWebViewDuringLoad();
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+        loadInspectorBackgroundPagesDuringLoad();
+#endif
+
+        // Notify the WebProcess that the extension loaded before we inject content scripts.
+        // This will ensure that the content world is set up correctly (e.g. configured with the `browser` namespace).
+        if (RefPtr controller = extensionController())
+            controller->dispatchDidLoad(*this);
+
+        addInjectedContent();
+    });
+
+    return true;
 }
 
-GRefPtr<GKeyFile> WebExtensionContext::readStateFromPath(const String& stateFilePath)
+Expected<bool, RefPtr<API::Error>> WebExtensionContext::unload()
 {
-    GRefPtr<GKeyFile> stateFile(g_key_file_new());
+    if (!isLoaded()) {
+        RELEASE_LOG_ERROR(Extensions, "Extension context not loaded");
+        return makeUnexpected(createError(Error::NotLoaded));
+    }
+
+    writeStateToStorage();
+
+    unloadBackgroundWebView();
+    removeInjectedContent();
+
+    invalidateStorage();
+
+    m_privilegedIdentifier = std::nullopt;
+
+    m_actionsToPerformAfterBackgroundContentLoads.clear();
+    m_backgroundContentEventListeners.clear();
+    m_eventListenerFrames.clear();
+    m_installReason = InstallReason::None;
+    m_previousVersion = nullString();
+    m_safeToLoadBackgroundContent = false;
+    m_backgroundContentLoadError = nullptr;
+
+    m_registeredScriptsMap.clear();
+    m_dynamicallyInjectedUserStyleSheets.clear();
+    m_injectedScriptsPerPatternMap.clear();
+    m_injectedStyleSheetsPerPatternMap.clear();
+    m_safeToInjectContent = false;
+
+    m_extensionController = nullptr;
+    m_contentScriptWorld = nullptr;
+
+    m_tabMap.clear();
+    m_extensionPageTabMap.clear();
+
+    m_windowMap.clear();
+    m_windowOrderVector.clear();
+    m_focusedWindowIdentifier = std::nullopt;
+
+    m_actionWindowMap.clear();
+    m_actionTabMap.clear();
+    m_defaultAction = nullptr;
+#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
+    m_defaultSidebar = nullptr;
+#endif
+    m_popupPageActionMap.clear();
+
+    m_ports.clear();
+    m_pagePortMap.clear();
+    m_portQueuedMessages.clear();
+    m_nativePortMap.clear();
+
+    m_alarmMap.clear();
+
+    m_commands.clear();
+    m_populatedCommands = false;
+
+    m_menuItems.clear();
+    m_mainMenuItems.clear();
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    m_inspectorContextMap.clear();
+#endif
+
+    m_pendingPermissionRequests = 0;
+
+    return true;
+}
+
+GKeyFile* WebExtensionContext::currentState() const
+{
+    return m_state.get();
+}
+
+GKeyFile* WebExtensionContext::readStateFromPath(const String& stateFilePath)
+{
+    GUniquePtr<GKeyFile> stateFile(g_key_file_new());
     GUniqueOutPtr<GError> error;
 
     g_key_file_load_from_file(stateFile.get(), stateFilePath.utf8().data(), G_KEY_FILE_NONE, &error.outPtr());
     if (error)
         RELEASE_LOG_ERROR(Extensions, "Failed to coordinate reading extension state: %" PUBLIC_LOG_STRING, error->message);
 
-    return stateFile;
+    return stateFile.get();
 }
 
 bool WebExtensionContext::readLastBaseURLFromState(const String& filePath, URL& outLastBaseURL)
 {
-    GRefPtr<GKeyFile> state(readStateFromPath(filePath));
+    GUniquePtr<GKeyFile> state(readStateFromPath(filePath));
 
     if (auto *baseURL = g_key_file_get_string(state.get(), groupNameStateKey, lastSeenBaseURLStateKey, nullptr))
         outLastBaseURL = URL { String::fromUTF8(baseURL) };
@@ -112,7 +232,7 @@ bool WebExtensionContext::readLastBaseURLFromState(const String& filePath, URL& 
 
 bool WebExtensionContext::readDisplayNameFromState(const String& filePath, String& outDisplayName)
 {
-    GRefPtr<GKeyFile> state(readStateFromPath(filePath));
+    GUniquePtr<GKeyFile> state(readStateFromPath(filePath));
 
     if (auto *displayName = g_key_file_get_string(state.get(), groupNameStateKey, lastSeenDisplayNameStateKey, nullptr))
         outDisplayName = String::fromUTF8(displayName);
@@ -120,19 +240,17 @@ bool WebExtensionContext::readDisplayNameFromState(const String& filePath, Strin
     return outDisplayName.length();
 }
 
-GRefPtr<GKeyFile> WebExtensionContext::readStateFromStorage()
+const GKeyFile* WebExtensionContext::readStateFromStorage()
 {
     if (!storageIsPersistent()) {
-        if (!m_state) {
-            GRefPtr<GKeyFile> stateFile(g_key_file_new());
-            m_state = stateFile;
-        }
-        return m_state;
+        if (!m_state)
+            m_state.reset(g_key_file_new());
+        return m_state.get();
     }
 
     auto savedState = readStateFromPath(stateFilePath());
-    m_state = savedState;
-    return savedState;
+    m_state.reset(savedState);
+    return m_state.get();
 }
 
 void WebExtensionContext::writeStateToStorage() const
@@ -142,7 +260,7 @@ void WebExtensionContext::writeStateToStorage() const
 
     GUniqueOutPtr<GError> error;
 
-    if (!g_key_file_save_to_file(currentState().get(), stateFilePath().utf8().data(), &error.outPtr()))
+    if (!g_key_file_save_to_file(currentState(), stateFilePath().utf8().data(), &error.outPtr()))
         RELEASE_LOG_ERROR(Extensions, "Unable to save extension state: %" PUBLIC_LOG_STRING, error->message);
 
     if (error)
@@ -169,6 +287,13 @@ void WebExtensionContext::moveLocalStorageIfNeeded(const URL& previousBaseURL, C
     dataStore->renameOriginInWebsiteData(WTF::move(oldOrigin), WTF::move(newOrigin), { WebsiteDataType::IndexedDBDatabases, WebsiteDataType::LocalStorage }, [completionHandler = WTF::move(completionHandler)] mutable {
         completionHandler();
     });
+}
+
+void WebExtensionContext::invalidateStorage()
+{
+    m_localStorageStore = nullptr;
+    m_sessionStorageStore = nullptr;
+    m_syncStorageStore = nullptr;
 }
 
 void WebExtensionContext::setInspectable(bool inspectable)
@@ -220,6 +345,27 @@ void WebExtensionContext::permissionsDidChange(WebExtensionContext::PermissionNo
     if (permissions.isEmpty())
         return;
 
+    if (isLoaded()) {
+        RefPtr extensionController = this->extensionController();
+        if (!extensionController)
+            return;
+
+        extensionController->sendToAllProcesses(Messages::WebExtensionContextProxy::UpdateGrantedPermissions(m_grantedPermissions), identifier());
+
+        if (permissions.contains(WebExtensionPermission::clipboardWrite())) {
+            bool granted = hasPermission(WebExtensionPermission::clipboardWrite());
+
+            enumerateExtensionPages([&](auto& page, bool&) {
+                page.preferences().setJavaScriptCanAccessClipboard(granted);
+            });
+        }
+
+        // if (notification == PermissionNotification::PermissionsWereGranted)
+        //     firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnAdded, permissions, { });
+        // else if (notification == PermissionNotification::GrantedPermissionsWereRemoved)
+        //     firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnRemoved, permissions, { });
+    }
+
     g_signal_emit_by_name(m_delegate.get(), permissionNotification(notification).utf8().data());
 }
 
@@ -230,7 +376,25 @@ void WebExtensionContext::permissionsDidChange(WebExtensionContext::PermissionNo
 
     clearCachedPermissionStates();
 
+    if (isLoaded()) {
+        updateCORSDisablingPatternsOnAllExtensionPages();
+
+        if (notification == PermissionNotification::PermissionMatchPatternsWereGranted) {
+            addInjectedContent(injectedContents(), matchPatterns);
+            // firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnAdded, { }, matchPatterns);
+        } else if (notification == PermissionNotification::GrantedPermissionMatchPatternsWereRemoved) {
+            removeInjectedContent(matchPatterns);
+            // firePermissionsEventListenerIfNecessary(WebExtensionEventListenerType::PermissionsOnRemoved, { }, matchPatterns);
+        } else
+            updateInjectedContent();
+    }
+
     g_signal_emit_by_name(m_delegate.get(), permissionNotification(notification).utf8().data());
+}
+
+void WebExtensionContext::removePage(WebPageProxy& page)
+{
+    // This is a stub for now
 }
 
 std::optional<WebCore::PageIdentifier> WebExtensionContext::backgroundPageIdentifier() const
@@ -242,12 +406,35 @@ std::optional<WebCore::PageIdentifier> WebExtensionContext::backgroundPageIdenti
     return pageProxy->webPageIDInMainFrameProcess();
 }
 
+void WebExtensionContext::enumerateExtensionPages(NOESCAPE Function<void(WebPageProxy&, bool&)>&& action)
+{
+    if (!isLoaded())
+        return;
+
+    bool stop = false;
+    for (Ref page : extensionController()->allPages()) {
+        auto* webView = page->platformView();
+        if (isURLForThisExtension(webkitSettingsGetWebExtensionContext(webkit_web_view_get_settings(webView))->baseURL())) {
+            action(page, stop);
+            if (stop)
+                return;
+        }
+    }
+}
+
+void WebExtensionContext::updateCORSDisablingPatternsOnAllExtensionPages()
+{
+    enumerateExtensionPages([&](auto& page, bool& stop) {
+        page.setCORSDisablingPatterns(corsDisablingPatterns());
+    });
+}
+
 WebKitSettings* WebExtensionContext::webViewConfiguration(WebViewPurpose purpose)
 {
     if (!isLoaded())
         return nullptr;
 
-    WebKitSettings* settings = webkit_settings_new();
+    WebKitSettings* settings = extensionController()->protectedConfiguration()->webViewConfiguration();
     WebKit::WebPreferences* preferences = webkitSettingsGetPreferences(settings);
 
     webkit_settings_set_javascript_can_access_clipboard(settings, hasPermission(WebExtensionPermission::clipboardWrite()));
@@ -276,19 +463,17 @@ bool WebExtensionContext::isBackgroundPage(WebPageProxyIdentifier pageProxyIdent
     return pageProxy->identifier() == pageProxyIdentifier;
 }
 
-bool WebExtensionContext::backgroundContentIsLoaded() const
+void WebExtensionContext::unloadBackgroundWebView()
 {
-    return m_backgroundWebView && m_backgroundContentIsLoaded && m_actionsToPerformAfterBackgroundContentLoads.isEmpty();
-}
-
-void WebExtensionContext::loadBackgroundWebViewIfNeeded()
-{
-    ASSERT(isLoaded());
-
-    if (!protectedExtension()->hasBackgroundContent() || m_backgroundWebView || !safeToLoadBackgroundContent())
+    if (!m_backgroundWebView)
         return;
 
-    loadBackgroundWebView();
+    m_backgroundContentIsLoaded = false;
+    m_unloadBackgroundWebViewTimer = nullptr;
+    m_backgroundWebViewActivity = nullptr;
+
+    webkit_web_view_try_close(m_backgroundWebView.get());
+    m_backgroundWebView = nullptr;
 }
 
 void WebExtensionContext::setBackgroundWebViewInspectionName(const String& name)
@@ -303,7 +488,6 @@ void WebExtensionContext::unloadBackgroundContentIfPossible()
 {
     if (!m_backgroundWebView || protectedExtension()->backgroundContentIsPersistent())
         return;
-
 
     if (m_pendingPermissionRequests) {
         RELEASE_LOG_DEBUG(Extensions, "Not unloading background content because it has pending permission requests");
@@ -350,10 +534,6 @@ void WebExtensionContext::determineInstallReasonDuringLoad()
         // Clear background event listeners on extension update.
         g_key_file_remove_key(m_state.get(), groupNameStateKey, backgroundContentEventListenersKey, nullptr);
         g_key_file_remove_key(m_state.get(), groupNameStateKey, backgroundContentEventListenersVersionKey, nullptr);
-
-        // Clear other state that is not persistent between extension updates.
-        clearDeclarativeNetRequestRulesetState();
-        clearRegisteredContentScripts();
 
         RELEASE_LOG_DEBUG(Extensions, "Queued installed event with extension update reason");
         m_installReason = InstallReason::ExtensionUpdate;

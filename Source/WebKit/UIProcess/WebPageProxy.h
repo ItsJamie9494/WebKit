@@ -425,6 +425,10 @@ struct wpe_view_backend;
 typedef struct _WPEView WPEView;
 #endif
 
+#if USE(GLIB)
+typedef struct _WebKitWebView WebKitWebView;
+#endif // USE(GLIB)
+
 namespace WebCore {
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
 class DynamicContentScalingDisplayList;
@@ -2524,6 +2528,11 @@ public:
 
     RetainPtr<WKWebView> cocoaView();
     void setCocoaView(WKWebView *);
+#endif
+
+#if USE(GLIB)
+    WebKitWebView *platformView();
+    void setPlatformView(WebKitWebView *);
 #endif
 
     bool shouldAvoidSynchronouslyWaitingToPreventDeadlock() const;

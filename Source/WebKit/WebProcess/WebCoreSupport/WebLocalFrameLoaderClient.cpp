@@ -112,7 +112,7 @@
 #include <WebCore/DocumentFullscreen.h>
 #endif
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
 #include "WebExtensionControllerProxy.h"
 #endif
 
@@ -1757,7 +1757,7 @@ void WebLocalFrameLoaderClient::dispatchGlobalObjectAvailable(DOMWrapperWorld& w
     if (!webPage)
         return;
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->globalObjectIsAvailableForFrame(*webPage, m_frame, world);
 #endif
@@ -1771,7 +1771,7 @@ void WebLocalFrameLoaderClient::dispatchServiceWorkerGlobalObjectAvailable(DOMWr
     if (!webPage)
         return;
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->serviceWorkerGlobalObjectIsAvailableForFrame(*webPage, m_frame, world);
 #endif
@@ -1785,7 +1785,7 @@ void WebLocalFrameLoaderClient::willInjectUserScript(DOMWrapperWorld& world)
     if (!webPage)
         return;
 
-#if ENABLE(WK_WEB_EXTENSIONS) && PLATFORM(COCOA)
+#if ENABLE(WK_WEB_EXTENSIONS)
     if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
         extensionControllerProxy->globalObjectIsAvailableForFrame(*webPage, m_frame, world);
 #endif

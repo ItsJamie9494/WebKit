@@ -51,6 +51,7 @@
 #include <@API_INCLUDE_PREFIX@/WebKitUserContentManager.h>
 #include <@API_INCLUDE_PREFIX@/WebKitUserMessage.h>
 #include <@API_INCLUDE_PREFIX@/WebKitWebContext.h>
+#include <@API_INCLUDE_PREFIX@/WebKitWebExtensionManager.h>
 #include <@API_INCLUDE_PREFIX@/WebKitWebResource.h>
 #include <@API_INCLUDE_PREFIX@/WebKitWebViewSessionState.h>
 #include <@API_INCLUDE_PREFIX@/WebKitWebsitePolicies.h>
@@ -925,6 +926,9 @@ webkit_web_view_is_immersive_mode_enabled            (WebKitWebView             
 
 WEBKIT_API void
 webkit_web_view_leave_immersive_mode                 (WebKitWebView             *web_view);
+
+WEBKIT_API WebKitWebExtensionManager *
+webkit_web_view_get_web_extension_manager            (WebKitWebView             *web_view);
 
 #if USE(GI_FINISH_FUNC_ANNOTATION)
 /**

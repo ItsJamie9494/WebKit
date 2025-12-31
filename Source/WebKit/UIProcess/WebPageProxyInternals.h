@@ -102,6 +102,11 @@
 #include <WebCore/ImageAnalysisQueue.h>
 #endif
 
+#if USE(GLIB)
+#include "WebKitWebView.h"
+#include <wtf/glib/GWeakPtr.h>
+#endif
+
 namespace WebKit {
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
@@ -331,6 +336,10 @@ public:
 #if PLATFORM(COCOA)
     WeakObjCPtr<WKWebView> cocoaView;
     std::optional<TransactionID> firstLayerTreeTransactionIdAfterDidCommitLoad;
+#endif
+
+#if USE(GLIB)
+    GWeakPtr<WebKitWebView> platformView;
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
