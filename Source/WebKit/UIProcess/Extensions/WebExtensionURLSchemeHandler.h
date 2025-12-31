@@ -31,10 +31,29 @@
 #include <wtf/Forward.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WorkerPool.h>
 
+#if PLATFORM(COCOA)
 OBJC_CLASS NSBlockOperation;
+#endif
 
 namespace WebKit {
+
+class Cancellable final : public RefCounted<Cancellable> {
+public:
+    static Ref<Cancellable> create()
+    {
+        return adoptRef(*new Cancellable);
+    }
+
+    void cancel() { m_cancelled = true; }
+    bool isCancelled() { return m_cancelled; }
+
+private:
+    Cancellable() = default;
+
+    bool m_cancelled { false };
+};
 
 class WebExtensionController;
 
@@ -53,7 +72,12 @@ private:
     void platformTaskCompleted(WebURLSchemeTask&) final;
 
     WeakPtr<WebExtensionController> m_webExtensionController;
+#if PLATFORM(COCOA)
     HashMap<Ref<WebURLSchemeTask>, RetainPtr<NSBlockOperation>> m_operations;
+#else
+    RefPtr<WorkerPool> m_workerPool;
+    HashMap<Ref<WebURLSchemeTask>, RefPtr<Cancellable>> m_operations;
+#endif
 }; // class WebExtensionURLSchemeHandler
 
 } // namespace WebKit

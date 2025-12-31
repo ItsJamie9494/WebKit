@@ -234,6 +234,7 @@ UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
 UIProcess/Extensions/glib/WebExtensionGLib.cpp
 UIProcess/Extensions/glib/WebExtensionContextGLib.cpp
+UIProcess/Extensions/glib/WebExtensionURLSchemeHandlerGLib.cpp
 
 UIProcess/Extensions/gtk/WebExtensionGTK.cpp
 UIProcess/Extensions/gtk/WebExtensionContextGTK.cpp
