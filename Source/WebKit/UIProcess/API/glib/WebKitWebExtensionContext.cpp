@@ -981,6 +981,20 @@ RefPtr<WebExtensionContext> webkitWebExtensionContextGetInternalContext(WebKitWe
 {
     return context->priv->context;
 }
+
+void webkitWebExtensionContextSendTestMessage(WebKitWebExtensionContext* context, const char* message, const char* argument)
+{
+    context->priv->context->sendTestMessage(String::fromUTF8(message), String::fromUTF8(argument));
+}
+
+void webkitWebExtensionContextSendTestStarted(WebKitWebExtensionContext* context, const char* argument)
+{
+    context->priv->context->sendTestStarted(String::fromUTF8(argument));
+}
+
+void webkitWebExtensionContextSendTestFinished(WebKitWebExtensionContext* context, const char* argument)
+{
+    context->priv->context->sendTestFinished(String::fromUTF8(argument));
 }
 
 static gboolean webkitWebExtensionContextInitableInit(GInitable* initable, GCancellable* cancellable, GError** error)

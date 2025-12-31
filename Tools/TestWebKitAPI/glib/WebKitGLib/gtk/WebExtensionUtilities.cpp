@@ -53,6 +53,16 @@ GRefPtr<GBytes> makePNGData(int width, int height, int color)
     return adoptGRef(g_bytes_new_take(buffer, bufferSize));
 }
 
+void runFor(double seconds)
+{
+    auto mainloop = g_main_loop_new(nullptr, TRUE);
+    g_timeout_add(seconds * 1000, [](gpointer userData) -> gboolean {
+        g_main_loop_quit(static_cast<GMainLoop*>(userData));
+        return G_SOURCE_REMOVE;
+    }, mainloop);
+    g_main_loop_run(mainloop);
+}
+
 } // namespace Util
 } // namespace TestWebKitAPI
 

@@ -856,17 +856,23 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(WKWeb
 {
     NSParameterAssert([message isKindOfClass:NSString.class]);
 
-    self._protectedWebExtensionContext->sendTestMessage(message, argument);
+    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
+
+    self._protectedWebExtensionContext->sendTestMessage(message, argumentJSON);
 }
 
 - (void)_sendTestStartedWithArgument:(id)argument
 {
-    self._protectedWebExtensionContext->sendTestStarted(argument);
+    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
+
+    self._protectedWebExtensionContext->sendTestStarted(argumentJSON);
 }
 
 - (void)_sendTestFinishedWithArgument:(id)argument
 {
-    self._protectedWebExtensionContext->sendTestFinished(argument);
+    String argumentJSON = encodeJSONString(argument, JSONOptions::FragmentsAllowed);
+
+    self._protectedWebExtensionContext->sendTestFinished(argumentJSON);
 }
 
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)

@@ -598,11 +598,9 @@ public:
 
     bool inTestingMode() const;
 
-#if PLATFORM(COCOA)
-    void sendTestMessage(const String& message, id argument);
-    void sendTestStarted(id argument);
-    void sendTestFinished(id argument);
-#endif
+    void sendTestMessage(const String& message, const String& argument);
+    void sendTestStarted(const String& argument);
+    void sendTestFinished(const String& argument);
 
     URL backgroundContentURL();
     WebViewClass *backgroundWebView() const { return static_cast<WebViewClass*>(m_backgroundWebView.get()); }
@@ -1213,9 +1211,7 @@ private:
 
     struct TestMessage {
         String message;
-#if PLATFORM(COCOA)
-        RetainPtr<id> argument;
-#endif
+        String argument;
     };
 
     size_t m_testMessageListenersCount { 0 };
@@ -1228,9 +1224,7 @@ private:
 
     bool hasTestEventListeners(WebExtensionEventListenerType);
     void sendQueuedTestMessagesIfNeeded(WebExtensionEventListenerType);
-#if PLATFORM(COCOA)
-    void addTestMessageToQueue(const String& message, id argument, WebExtensionEventListenerType);
-#endif
+    void addTestMessageToQueue(const String& message, const String& argument, WebExtensionEventListenerType);
 };
 
 template<typename T>

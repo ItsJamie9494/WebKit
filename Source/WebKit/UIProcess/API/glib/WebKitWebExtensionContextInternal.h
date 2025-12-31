@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,8 +19,16 @@
 
 #pragma once
 
-#include "JSCValue.h"
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-JS_EXPORT_PRIVATE JSValueRef jscValueGetJSValue(JSCValue*);
-JS_EXPORT_PRIVATE JSCValue* jscValueCreate(JSCContext*, JSValueRef);
-void jscValueAddPropertyAccessor(JSCValue*, const char*, GType, GCallback, GCallback, gpointer, GDestroyNotify);
+#include "WebKitWebExtensionContext.h"
+
+#include <WebKit/WKBase.h>
+
+typedef struct _WebKitWebExtensionContext WebKitWebExtensionContext;
+
+WK_EXPORT void webkitWebExtensionContextSendTestMessage(WebKitWebExtensionContext*, const char* message, const char* argument);
+WK_EXPORT void webkitWebExtensionContextSendTestStarted(WebKitWebExtensionContext*, const char* argument);
+WK_EXPORT void webkitWebExtensionContextSendTestFinished(WebKitWebExtensionContext*, const char* argument);
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

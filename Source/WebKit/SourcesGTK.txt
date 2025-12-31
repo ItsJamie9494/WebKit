@@ -236,6 +236,8 @@ UIProcess/Extensions/glib/WebExtensionGLib.cpp
 UIProcess/Extensions/glib/WebExtensionContextGLib.cpp
 UIProcess/Extensions/glib/WebExtensionURLSchemeHandlerGLib.cpp
 
+UIProcess/Extensions/glib/API/WebExtensionControllerAPITestGLib.cpp
+
 UIProcess/Extensions/gtk/WebExtensionGTK.cpp
 UIProcess/Extensions/gtk/WebExtensionContextGTK.cpp
 UIProcess/Extensions/gtk/WebExtensionControllerGtk.cpp
@@ -323,6 +325,8 @@ UIProcess/XR/openxr/OpenXRLayer.cpp
 UIProcess/XR/openxr/OpenXRSwapchain.cpp
 UIProcess/XR/openxr/PlatformXROpenXR.cpp
 UIProcess/XR/openxr/PlatformXRSystemOpenXR.cpp
+
+WebProcess/Extensions/API/glib/WebExtensionAPITestGLib.cpp
 
 WebProcess/GPU/graphics/gbm/RemoteGraphicsContextGLProxyGBM.cpp
 
