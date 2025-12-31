@@ -1680,7 +1680,7 @@
 		7CF47FF717275B71008ACB91 /* WKBundlePageBanner.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FF517275B71008ACB91 /* WKBundlePageBanner.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		7CF47FFB17275C57008ACB91 /* PageBanner.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FF917275C57008ACB91 /* PageBanner.h */; };
 		7CF47FFF17276AE3008ACB91 /* WKBundlePageBannerMac.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CF47FFD17276AE3008ACB91 /* WKBundlePageBannerMac.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		7DF6CAA12EC06B0D00AE220C /* JSWebExtensionAPITest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C15497E2926C05A001B9E5B /* JSWebExtensionAPITest.cpp */; };
+		7D37E4422ECBF009008C5F1E /* JSWebExtensionAPIUnified.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D37E4412ECBF009008C5F1E /* JSWebExtensionAPIUnified.cpp */; };
 		8310428B1BD6B66F00A715E4 /* NetworkCacheSubresourcesEntry.h in Headers */ = {isa = PBXBuildFile; fileRef = 831042891BD6B66F00A715E4 /* NetworkCacheSubresourcesEntry.h */; };
 		8313F7EC1F7DAE0800B944EB /* SharedStringHashStore.h in Headers */ = {isa = PBXBuildFile; fileRef = 8313F7E91F7DAE0300B944EB /* SharedStringHashStore.h */; };
 		8313F7EE1F7DAE0800B944EB /* SharedStringHashTable.h in Headers */ = {isa = PBXBuildFile; fileRef = 8313F7E71F7DAE0300B944EB /* SharedStringHashTable.h */; };
@@ -4005,14 +4005,11 @@
 		1C2184012233872800BAC700 /* NSAttributedStringPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSAttributedStringPrivate.h; sourceTree = "<group>"; };
 		1C2B4D3C2A8091FF00C528A1 /* WebExtensionAlarm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionAlarm.cpp; sourceTree = "<group>"; };
 		1C2B4D3D2A8091FF00C528A1 /* WebExtensionAlarm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionAlarm.h; sourceTree = "<group>"; };
-		1C2B4D3E2A815ACC00C528A1 /* WebExtensionContextAPIAlarmsCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionContextAPIAlarmsCocoa.mm; sourceTree = "<group>"; };
 		1C2B4D402A817D6A00C528A1 /* WebExtensionAlarmParameters.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebExtensionAlarmParameters.serialization.in; sourceTree = "<group>"; };
 		1C2B4D412A817D6B00C528A1 /* WebExtensionAlarmParameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionAlarmParameters.h; sourceTree = "<group>"; };
-		1C2B4D432A8199C100C528A1 /* WebExtensionAPIAlarmsCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionAPIAlarmsCocoa.mm; sourceTree = "<group>"; };
 		1C2B4D452A8199CC00C528A1 /* WebExtensionAPIAlarms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionAPIAlarms.h; sourceTree = "<group>"; };
 		1C2B4D472A819C4700C528A1 /* WebExtensionAPIAlarms.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebExtensionAPIAlarms.idl; sourceTree = "<group>"; };
 		1C2B4D482A819D0C00C528A1 /* JSWebExtensionAPIAlarms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWebExtensionAPIAlarms.h; sourceTree = "<group>"; };
-		1C2B4D492A819D0C00C528A1 /* JSWebExtensionAPIAlarms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = JSWebExtensionAPIAlarms.mm; sourceTree = "<group>"; };
 		1C2BBF922B82BC5D001DBDFC /* WebExtensionError.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionError.h; sourceTree = "<group>"; };
 		1C386F2E2AF407B1004108F0 /* WebExtensionAPINotifications.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = WebExtensionAPINotifications.idl; sourceTree = "<group>"; };
 		1C386F2F2AF4082F004108F0 /* WebExtensionAPINotifications.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionAPINotifications.h; sourceTree = "<group>"; };
@@ -6991,12 +6988,16 @@
 		7CF47FF917275C57008ACB91 /* PageBanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PageBanner.h; sourceTree = "<group>"; };
 		7CF47FFC17276AE3008ACB91 /* WKBundlePageBannerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKBundlePageBannerMac.mm; sourceTree = "<group>"; };
 		7CF47FFD17276AE3008ACB91 /* WKBundlePageBannerMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKBundlePageBannerMac.h; sourceTree = "<group>"; };
+		7D034FB72EDD050D00FD70F7 /* WebExtensionAPIEvent.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionAPIEvent.cpp; sourceTree = "<group>"; };
+		7D034FB82EDD050D00FD70F7 /* WebExtensionAPINamespace.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionAPINamespace.cpp; sourceTree = "<group>"; };
 		7D199FE32E1B4ECF0042147F /* WebExtensionDeclarativeNetRequestSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionDeclarativeNetRequestSQLiteStore.h; sourceTree = "<group>"; };
 		7D199FE42E1B4ECF0042147F /* WebExtensionDeclarativeNetRequestSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionDeclarativeNetRequestSQLiteStore.cpp; sourceTree = "<group>"; };
 		7D199FE52E1B4EE10042147F /* WebExtensionContextAPIDeclarativeNetRequest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionContextAPIDeclarativeNetRequest.cpp; sourceTree = "<group>"; };
 		7D1A8A0A2D405B34001715DF /* WebExtensionContextAPIStorage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionContextAPIStorage.cpp; sourceTree = "<group>"; };
 		7D1A8A0C2D405B34001715DF /* WebExtensionStorageSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionStorageSQLiteStore.h; sourceTree = "<group>"; };
 		7D1A8A0D2D405B34001715DF /* WebExtensionStorageSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionStorageSQLiteStore.cpp; sourceTree = "<group>"; };
+		7D37E4412ECBF009008C5F1E /* JSWebExtensionAPIUnified.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSWebExtensionAPIUnified.cpp; sourceTree = "<group>"; };
+		7D3FF7012ECBBDB100A26C20 /* JSWebExtensionAPIAlarms.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSWebExtensionAPIAlarms.cpp; sourceTree = "<group>"; };
 		7D49D11F2D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatabase.h; sourceTree = "<group>"; };
 		7D49D1202D1AA1AE00C6855E /* WebExtensionSQLiteDatabase.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionSQLiteDatabase.cpp; sourceTree = "<group>"; };
 		7D49D1212D1AA1AE00C6855E /* WebExtensionSQLiteDatatypeTraits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionSQLiteDatatypeTraits.h; sourceTree = "<group>"; };
@@ -7011,6 +7012,8 @@
 		7D51514A2CF818CA0035DD16 /* WebExtensionLocalization.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionLocalization.cpp; sourceTree = "<group>"; };
 		7D51514B2CF818CA0035DD16 /* WebExtensionUtilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionUtilities.cpp; sourceTree = "<group>"; };
 		7D5ADAB42E50438300B9AA45 /* WebExtensionRegisteredScriptsSQLiteStoreCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionRegisteredScriptsSQLiteStoreCocoa.mm; sourceTree = "<group>"; };
+		7D6A7F372ED0D4C50082F746 /* WebExtensionContextAPIAlarms.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionContextAPIAlarms.cpp; sourceTree = "<group>"; };
+		7DB312D82ED01B42002CD05F /* WebExtensionAPIAlarms.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionAPIAlarms.cpp; sourceTree = "<group>"; };
 		7DDEC9D32D4C5DDA000B1353 /* WebExtensionRegisteredScriptsSQLiteStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebExtensionRegisteredScriptsSQLiteStore.h; sourceTree = "<group>"; };
 		7DDEC9D42D4C5DDA000B1353 /* WebExtensionRegisteredScriptsSQLiteStore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebExtensionRegisteredScriptsSQLiteStore.cpp; sourceTree = "<group>"; };
 		7DE4AC4A2E55521C00475DD8 /* WebExtensionDeclarativeNetRequestSQLiteStoreCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebExtensionDeclarativeNetRequestSQLiteStoreCocoa.mm; sourceTree = "<group>"; };
@@ -10636,7 +10639,6 @@
 			isa = PBXGroup;
 			children = (
 				1CC94E592AC941C40045F269 /* WebExtensionContextAPIActionCocoa.mm */,
-				1C2B4D3E2A815ACC00C528A1 /* WebExtensionContextAPIAlarmsCocoa.mm */,
 				96CC7DBD2E15DA2900233E69 /* WebExtensionContextAPIBookmarksCocoa.mm */,
 				1C8ECFEB2AFC8033007BAA62 /* WebExtensionContextAPICommandsCocoa.mm */,
 				1C7308812B33580D00B341DE /* WebExtensionContextAPICookiesCocoa.mm */,
@@ -10677,6 +10679,7 @@
 			children = (
 				1C5DC4502908A9D00061EC62 /* Cocoa */,
 				1CC94E552AC92F960045F269 /* WebExtensionAPIAction.h */,
+				7DB312D82ED01B42002CD05F /* WebExtensionAPIAlarms.cpp */,
 				1C2B4D452A8199CC00C528A1 /* WebExtensionAPIAlarms.h */,
 				96EE6CE72DFA4975000F90BD /* WebExtensionAPIBookmarks.h */,
 				1C8ECFE32AFC79E9007BAA62 /* WebExtensionAPICommands.h */,
@@ -10688,10 +10691,12 @@
 				1C517F522B743ED900C46EDC /* WebExtensionAPIDevToolsNetwork.h */,
 				1C517F542B743EE500C46EDC /* WebExtensionAPIDevToolsPanels.h */,
 				1C05906E2DFA1039000406F9 /* WebExtensionAPIDOM.h */,
+				7D034FB72EDD050D00FD70F7 /* WebExtensionAPIEvent.cpp */,
 				B6544F912937E45000034EB0 /* WebExtensionAPIEvent.h */,
 				1C5DC468290B239C0061EC62 /* WebExtensionAPIExtension.h */,
 				B6E5F2A4299C105500DBCEA3 /* WebExtensionAPILocalization.h */,
 				1CCEE4542B098B070034E059 /* WebExtensionAPIMenus.h */,
+				7D034FB82EDD050D00FD70F7 /* WebExtensionAPINamespace.cpp */,
 				1C5DC44F290888140061EC62 /* WebExtensionAPINamespace.h */,
 				1C386F2F2AF4082F004108F0 /* WebExtensionAPINotifications.h */,
 				1C5DC44E29087E7F0061EC62 /* WebExtensionAPIObject.h */,
@@ -10722,7 +10727,6 @@
 			isa = PBXGroup;
 			children = (
 				1CC94E572AC92FA50045F269 /* WebExtensionAPIActionCocoa.mm */,
-				1C2B4D432A8199C100C528A1 /* WebExtensionAPIAlarmsCocoa.mm */,
 				96D1B84C2E01F06300D2D42E /* WebExtensionAPIBookmarksCocoa.mm */,
 				1C8ECFE52AFC79F9007BAA62 /* WebExtensionAPICommandsCocoa.mm */,
 				1C4005282B2B938D00F2D9EE /* WebExtensionAPICookiesCocoa.mm */,
@@ -14344,6 +14348,7 @@
 		7D1A8A0B2D405B34001715DF /* API */ = {
 			isa = PBXGroup;
 			children = (
+				7D6A7F372ED0D4C50082F746 /* WebExtensionContextAPIAlarms.cpp */,
 				7D199FE52E1B4EE10042147F /* WebExtensionContextAPIDeclarativeNetRequest.cpp */,
 				7D1A8A0A2D405B34001715DF /* WebExtensionContextAPIStorage.cpp */,
 			);
@@ -16391,8 +16396,8 @@
 				0F5562E427EE28D100953585 /* GPUProcessProxyMessages.h */,
 				1CC94E522AC92F190045F269 /* JSWebExtensionAPIAction.h */,
 				1CC94E512AC92F190045F269 /* JSWebExtensionAPIAction.mm */,
+				7D3FF7012ECBBDB100A26C20 /* JSWebExtensionAPIAlarms.cpp */,
 				1C2B4D482A819D0C00C528A1 /* JSWebExtensionAPIAlarms.h */,
-				1C2B4D492A819D0C00C528A1 /* JSWebExtensionAPIAlarms.mm */,
 				96418A5D2DFA4B8100C19CDC /* JSWebExtensionAPIBookmarks.h */,
 				96418A5F2DFA4BA900C19CDC /* JSWebExtensionAPIBookmarks.mm */,
 				1C8ECFE72AFC7DCB007BAA62 /* JSWebExtensionAPICommands.h */,
@@ -16445,6 +16450,7 @@
 				1C5ACFA92A96F8D400C041C0 /* JSWebExtensionAPITabs.mm */,
 				1C15497E2926C05A001B9E5B /* JSWebExtensionAPITest.cpp */,
 				1C15497D2926C05A001B9E5B /* JSWebExtensionAPITest.h */,
+				7D37E4412ECBF009008C5F1E /* JSWebExtensionAPIUnified.cpp */,
 				1C0F05BD2CFA5D2E007D1F62 /* JSWebExtensionAPIUnified.mm */,
 				3399E14F2B59EFD6008BFB60 /* JSWebExtensionAPIWebNavigation.h */,
 				3375A3762942A19C0028536D /* JSWebExtensionAPIWebNavigation.mm */,
@@ -21345,7 +21351,7 @@
 				522F792928D50EBB0069B45B /* HidService.mm in Sources */,
 				2749F6442146561B008380BF /* InjectedBundleNodeHandle.cpp in Sources */,
 				2749F6452146561E008380BF /* InjectedBundleRangeHandle.cpp in Sources */,
-				7DF6CAA12EC06B0D00AE220C /* JSWebExtensionAPITest.cpp in Sources */,
+				7D37E4422ECBF009008C5F1E /* JSWebExtensionAPIUnified.cpp in Sources */,
 				1C0F05BE2CFA5D2E007D1F62 /* JSWebExtensionAPIUnified.mm in Sources */,
 				E385F3672E86D6C900461B0C /* LaunchLogHook.mm in Sources */,
 				C14D37FE24ACE086007FF014 /* LaunchServicesDatabaseManager.mm in Sources */,

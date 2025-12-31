@@ -1162,6 +1162,7 @@ def headers_for_type(type, for_implementation_file=False):
         'WebCore::PlaybackSessionModelExternalPlaybackTargetType': ['<WebCore/PlaybackSessionModel.h>'],
         'WebCore::LockBackForwardList': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::MediaPlaybackTargetContextMockState': ['<WebCore/MediaPlaybackTargetContext.h>'],
+        'WebCore::MediaPlayer::VideoFullscreenMode': ['<WebCore/MediaPlayer.h>'],
         'WebCore::MediaPlayerBufferingPolicy': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaPlayerMediaEngineIdentifier': ['<WebCore/MediaPlayerEnums.h>'],
         'WebCore::MediaPlayerPitchCorrectionAlgorithm': ['<WebCore/MediaPlayerEnums.h>'],

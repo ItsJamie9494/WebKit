@@ -95,7 +95,7 @@ WebExtensionCallbackHandler::~WebExtensionCallbackHandler()
 JSValueRef WebExtensionCallbackHandler::callbackFunction() const
 {
     if (!m_globalContext || !m_callbackFunction)
-        return nil;
+        return nullptr;
 
     return m_callbackFunction;
 }
@@ -106,7 +106,9 @@ void WebExtensionCallbackHandler::reportError(const String& message)
         return;
 
     if (RefPtr runtime = m_runtime) {
+#if PLATFORM(COCOA)
         runtime->reportError(message, *this);
+#endif
         return;
     }
 
@@ -168,6 +170,36 @@ RefPtr<WebExtensionCallbackHandler> toJSCallbackHandler(JSContextRef context, JS
     return WebExtensionCallbackHandler::create(context, callbackFunction, runtime);
 }
 
+String toSortedJSONString(JSContextRef context, JSValueRef value)
+{
+#if USE(GLIB)
+    auto data = toJSONString(context, value);
+    if (data.isEmpty())
+        return nullString();
+
+    RefPtr json = JSON::Value::parseJSON(data);
+    if (!json)
+        return nullString();
+
+    return json->toJSONString();
+#elif PLATFORM(COCOA)
+    // This double-JSON approach works best since it avoids JSC's Cocoa object conversion, which can produce JSValue's that NSJSONSerialization can't convert.
+    auto* data = [nsStringNilIfEmpty(toJSONString(context, value)).autorelease() dataUsingEncoding:NSUTF8StringEncoding];
+    if (!data)
+        return nullString();
+
+    id object = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:nullptr];
+    if (!object)
+        return nullString();
+
+    data = [NSJSONSerialization dataWithJSONObject:object options:NSJSONWritingFragmentsAllowed | NSJSONWritingSortedKeys error:nullptr];
+    if (!data)
+        return nullString();
+
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+#endif
+}
+
 String toString(JSContextRef context, JSValueRef value, NullStringPolicy nullStringPolicy)
 {
     ASSERT(context);
@@ -192,6 +224,8 @@ String toString(JSContextRef context, JSValueRef value, NullStringPolicy nullStr
         JSRetainPtr string(Adopt, JSValueToStringCopy(context, value, 0));
         return toString(string.get());
     }
+
+    return nullString();
 }
 
 String toString(JSStringRef string)
@@ -583,6 +617,105 @@ Vector<JSValueRef> toVector<JSValueRef>(JSContextRef context, JSValueRef value)
         JSValueRef itemValue = JSObjectGetPropertyAtIndex(context, object, i, nullptr);
         result.append(itemValue);
     }
+
+    return result;
+}
+
+static RefPtr<JSON::Value> toJSONArray(JSContextRef context, JSValueRef value)
+{
+    ASSERT(context);
+
+    if (!JSValueIsArray(context, value))
+        return nullptr;
+
+    JSObjectRef object = JSValueToObject(context, value, nullptr);
+    if (!object)
+        return nullptr;
+
+    // This is a safer cpp false positive (rdar://163760990).
+    SUPPRESS_UNCOUNTED_ARG size_t length = JSValueToInt32(context, JSObjectGetProperty(context, object, toJSString("length"_s).get(), nullptr), nullptr);
+    Ref result = JSON::Array::create();
+
+    for (size_t i = 0; i < length; i++) {
+        JSValueRef itemValue = JSObjectGetPropertyAtIndex(context, object, i, nullptr);
+        result->pushValue(fromJSValue(context, itemValue).releaseNonNull());
+    }
+
+    return result;
+}
+
+RefPtr<JSON::Value> fromJSValue(JSContextRef context, JSValueRef value)
+{
+    switch (JSValueGetType(context, value)) {
+    case kJSTypeBoolean:
+        return JSON::Value::create(JSValueToBoolean(context, value));
+    case kJSTypeNumber:
+        return JSON::Value::create(JSValueToNumber(context, value, nullptr));
+    case kJSTypeString:
+        return JSON::Value::create(toString(context, value));
+    case kJSTypeObject:
+        if (JSValueIsArray(context, value))
+            return toJSONArray(context, value);
+        return toJSONValue(context, value);
+    case kJSTypeNull:
+        return JSON::Value::null();
+    case kJSTypeUndefined:
+    default:
+        return nullptr;
+    }
+
+    return JSON::Value::null();
+}
+
+RefPtr<JSON::Value> toJSONValue(JSContextRef context, JSValueRef value, NullValuePolicy nullPolicy, ValuePolicy valuePolicy)
+{
+    ASSERT(context);
+
+    if (!JSValueIsObject(context, value))
+        return nullptr;
+
+    JSObjectRef object = JSValueToObject(context, value, nullptr);
+    if (!object)
+        return nullptr;
+
+    if (!isDictionary(context, value))
+        return nullptr;
+
+    JSPropertyNameArrayRef propertyNames = JSObjectCopyPropertyNames(context, object);
+    size_t propertyNameCount = JSPropertyNameArrayGetCount(propertyNames);
+
+    Ref<JSON::Object> result = JSON::Object::create();
+
+    for (size_t i = 0; i < propertyNameCount; ++i) {
+        JSRetainPtr propertyName = JSPropertyNameArrayGetNameAtIndex(propertyNames, i);
+        if (!propertyName)
+            continue;
+        // This is a safer cpp false positive (rdar://163760990).
+        SUPPRESS_UNCOUNTED_ARG JSValueRef item = JSObjectGetProperty(context, object, propertyName.get(), 0);
+
+        // Chrome does not include null values in dictionaries for web extensions.
+        if (nullPolicy == NullValuePolicy::NotAllowed && JSValueIsNull(context, item))
+            continue;
+
+        auto key = toString(propertyName.get());
+        auto itemValue = fromJSValue(context, item);
+        if (!itemValue)
+            continue;
+
+        if (valuePolicy == ValuePolicy::StopAtTopLevel) {
+            if (itemValue)
+                result->setString(key, itemValue.releaseNonNull()->toJSONString());
+            continue;
+        }
+
+        if (isDictionary(context, item)) {
+            if (RefPtr itemDictionary = toJSONValue(context, item, nullPolicy))
+                result->setValue(key, itemDictionary.releaseNonNull());
+        } else
+            result->setValue(key, itemValue.releaseNonNull());
+    }
+
+    JSPropertyNameArrayRelease(propertyNames);
 
     return result;
 }

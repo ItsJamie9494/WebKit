@@ -142,7 +142,7 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 
 set(WebKit_BINDINGS_IN_FILES
     WebProcess/Extensions/Interfaces/WebExtensionAPIAction
-    WebProcess/Extensions/Interfaces/WebExtensionAPIAlarms
+    WebProcess/Extensions/Interfaces/WebExtensionAPIBookmarks
     WebProcess/Extensions/Interfaces/WebExtensionAPICommands
     WebProcess/Extensions/Interfaces/WebExtensionAPICookies
     WebProcess/Extensions/Interfaces/WebExtensionAPIDOM
@@ -178,6 +178,7 @@ set(WebKit_BINDINGS_IN_FILES
 )
 
 set(WebKit_CPP_BINDINGS_IN_FILES
+    WebProcess/Extensions/Interfaces/WebExtensionAPIAlarms
     WebProcess/Extensions/Interfaces/WebExtensionAPITest
 )
 
