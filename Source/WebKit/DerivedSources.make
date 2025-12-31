@@ -1000,7 +1000,6 @@ EXTENSION_INTERFACES = \
     WebExtensionAPIExtension \
     WebExtensionAPILocalization \
     WebExtensionAPIMenus \
-    WebExtensionAPINamespace \
     WebExtensionAPINotifications \
     WebExtensionAPIPermissions \
     WebExtensionAPIPort \
@@ -1023,6 +1022,7 @@ EXTENSION_INTERFACES = \
 
 CPP_EXTENSION_INTERFACES = \
 	WebExtensionAPIAlarms \
+    WebExtensionAPINamespace \
     WebExtensionAPITest \
 #
 

@@ -61,16 +61,6 @@ WebExtension::WebExtension(GFile* resourcesFile, RefPtr<API::Error>& outError)
     }
 }
 
-WebExtension::WebExtension(const JSON::Value& manifest, Resources&& resources)
-    : m_manifestJSON(manifest)
-    , m_resources(WTFMove(resources))
-{
-    auto manifestString = manifest.toJSONString();
-    RELEASE_ASSERT(manifestString);
-
-    m_resources.set("manifest.json"_s, manifestString);
-}
-
 Expected<Ref<API::Data>, RefPtr<API::Error>> WebExtension::resourceDataForPath(const String& originalPath, CacheResult cacheResult, SuppressNotFoundErrors suppressErrors)
 {
     ASSERT(originalPath);

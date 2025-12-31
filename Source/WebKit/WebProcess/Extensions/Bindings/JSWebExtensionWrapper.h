@@ -183,6 +183,12 @@ JSValueRef fromArray(JSContextRef, Vector<String>&&);
 JSValueRef fromJSON(JSContextRef, RefPtr<JSON::Value>);
 JSValueRef fromObject(JSContextRef, HashMap<String, JSValueRef>&&);
 
+inline JSValueRef toJSValueRefOrJSNull(JSContextRef context, RefPtr<JSON::Value> value)
+{
+    ASSERT(context);
+    return fromJSON(context, value);
+}
+
 JSValueRef toJSValueRef(JSContextRef, const String&, NullOrEmptyString = NullOrEmptyString::NullStringAsEmptyString);
 
 JSValueRef toWindowObject(JSContextRef, WebFrame&);

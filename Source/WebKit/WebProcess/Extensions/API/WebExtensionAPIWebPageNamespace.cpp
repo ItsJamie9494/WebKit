@@ -23,37 +23,61 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "WebExtensionAPIWebPageNamespace.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#include "JSWebExtensionAPIWebPageNamespace.h"
-#include "JSWebExtensionWrappable.h"
-#include "WebExtensionAPIObject.h"
+#include "WebExtensionAPINamespace.h"
+#include "WebExtensionAPIRuntime.h"
+#include "WebExtensionAPITest.h"
+#include "WebExtensionContextProxy.h"
+#include "WebExtensionControllerProxy.h"
+#include "WebPage.h"
 
 namespace WebKit {
 
-class WebExtensionAPITest;
-class WebExtensionAPIWebPageRuntime;
-class WebPage;
+bool WebExtensionAPIWebPageNamespace::isPropertyAllowed(const ASCIILiteral& name, WebPage* page)
+{
+    if (name == "test"_s) {
+        if (!page)
+            return false;
+        if (RefPtr extensionController = page->webExtensionControllerProxy())
+            return extensionController->inTestingMode();
+        return false;
+    }
 
-class WebExtensionAPIWebPageNamespace : public WebExtensionAPIObject, public JSWebExtensionWrappable {
-    WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPIWebPageNamespace, webPageNamespace, browser);
+    ASSERT_NOT_REACHED();
+    return false;
+}
 
-public:
-    bool isPropertyAllowed(const ASCIILiteral& propertyName, WebPage*);
+WebExtensionAPIWebPageRuntime& WebExtensionAPIWebPageNamespace::runtime() const
+{
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime
 
-    WebExtensionAPIWebPageRuntime& runtime() const;
-    Ref<WebExtensionAPIWebPageRuntime> protectedRuntime() const;
-    WebExtensionAPITest& test();
+    if (!m_runtime) {
+        m_runtime = WebExtensionAPIWebPageRuntime::create(contentWorldType());
+        m_runtime->setPropertyPath("runtime"_s, this);
+    }
 
-private:
-    mutable RefPtr<WebExtensionAPIWebPageRuntime> m_runtime;
-    RefPtr<WebExtensionAPITest> m_test;
-};
+    return *m_runtime;
+}
+
+Ref<WebExtensionAPIWebPageRuntime> WebExtensionAPIWebPageNamespace::protectedRuntime() const
+{
+    return runtime();
+}
+
+WebExtensionAPITest& WebExtensionAPIWebPageNamespace::test()
+{
+    // Documentation: None (Testing Only)
+
+    if (!m_test)
+        m_test = WebExtensionAPITest::create(*this);
+
+    return *m_test;
+}
 
 } // namespace WebKit
-
-SPECIALIZE_TYPE_TRAITS_WEB_EXTENSION(WebExtensionAPIWebPageNamespace, webPageNamespace);
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

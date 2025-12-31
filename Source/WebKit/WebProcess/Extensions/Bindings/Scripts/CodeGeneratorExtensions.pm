@@ -145,12 +145,14 @@ sub conditionalString
 {
     my ($node) = @_;
     my $conditional = $node->extendedAttributes->{"Conditional"};
-    return "" unless $conditional;
+    my $cocoa = $node->extendedAttributes->{"CocoaOnly"};
+    return "" unless ($conditional || $cocoa);
     # We really should be calling this as $$self{codeGenerator}->Generate..., but that makes it hard
     # to call this function from ExtensionsGlobalObjectsCollector.pl. Since
     # GenerateConditionalStringFromAttributeValue doesn't actually use the object reference, this
     # way works just fine.
-    return CodeGenerator::GenerateConditionalStringFromAttributeValue(0, $conditional);
+    return CodeGenerator::GenerateConditionalStringFromAttributeValue(0, $conditional) unless $cocoa;
+    return "PLATFORM(COCOA)";
 }
 
 sub _generateHeaderFile

@@ -160,6 +160,16 @@ static constexpr auto sidePanelPathManifestKey = "default_path"_s;
 
 static const size_t maximumNumberOfShortcutCommands = 4;
 
+WebExtension::WebExtension(const JSON::Value& manifest, Resources&& resources)
+    : m_manifestJSON(manifest)
+    , m_resources(WTFMove(resources))
+{
+    auto manifestString = manifest.toJSONString();
+    RELEASE_ASSERT(manifestString);
+
+    m_resources.set("manifest.json"_s, manifestString);
+}
+
 WebExtension::WebExtension(Resources&& resources)
     : m_manifestJSON(JSON::Value::null())
     , m_resources(WTFMove(resources))

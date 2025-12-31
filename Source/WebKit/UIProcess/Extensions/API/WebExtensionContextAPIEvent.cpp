@@ -23,20 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !__has_feature(objc_arc)
-#error This file requires ARC. Add the "-fobjc-arc" compiler flag for this file.
-#endif
-
-#import "config.h"
-#import "WebExtensionContext.h"
+#include "config.h"
+#include "WebExtensionContext.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#import "WKWebExtensionControllerInternal.h"
-#import "WKWebViewInternal.h"
-#import "WebExtensionController.h"
-#import "WebProcessProxy.h"
-#import <wtf/EnumTraits.h>
+#include "WebExtensionController.h"
+#include "WebProcessProxy.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebKit {
 
@@ -53,7 +47,7 @@ void WebExtensionContext::addListener(WebCore::FrameIdentifier frameIdentifier, 
     if (!frame)
         return;
 
-    RELEASE_LOG_DEBUG(Extensions, "Registered event listener for type %{public}hhu in %{public}@ world", enumToUnderlyingType(listenerType), toDebugString(contentWorldType).createNSString().get());
+    RELEASE_LOG_DEBUG(Extensions, "Registered event listener for type %{public}hhu in %{public}@ world", enumToUnderlyingType(listenerType), toDebugString(contentWorldType));
 
     if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(frameIdentifier))
         m_backgroundContentEventListeners.add(listenerType);
@@ -93,7 +87,7 @@ void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifie
     if (!frame)
         return;
 
-    RELEASE_LOG_DEBUG(Extensions, "Unregistered %{public}llu event listener(s) for type %{public}hhu in %{public}@ world", removedCount, enumToUnderlyingType(listenerType), toDebugString(contentWorldType).createNSString().get());
+    RELEASE_LOG_DEBUG(Extensions, "Unregistered %{public}llu event listener(s) for type %{public}hhu in %{public}@ world", removedCount, enumToUnderlyingType(listenerType), toDebugString(contentWorldType));
 
     if (!protectedExtension()->backgroundContentIsPersistent() && isBackgroundPage(frameIdentifier)) {
         for (size_t i = 0; i < removedCount; ++i)

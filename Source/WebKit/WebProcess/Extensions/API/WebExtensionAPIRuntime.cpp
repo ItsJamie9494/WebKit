@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,63 +23,51 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !__has_feature(objc_arc)
-#error This file requires ARC. Add the "-fobjc-arc" compiler flag for this file.
-#endif
-
-#import "config.h"
-#import "WebExtensionAPIWebPageNamespace.h"
+#include "config.h"
+#include "WebExtensionAPIRuntime.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#import "WebExtensionAPINamespace.h"
-#import "WebExtensionAPIRuntime.h"
-#import "WebExtensionAPITest.h"
-#import "WebExtensionContextProxy.h"
-#import "WebExtensionControllerProxy.h"
-#import "WebPage.h"
-
 namespace WebKit {
 
-bool WebExtensionAPIWebPageNamespace::isPropertyAllowed(const ASCIILiteral& name, WebPage* page)
+bool WebExtensionAPIRuntime::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
 {
-    if (name == "test"_s) {
-        if (!page)
-            return false;
-        if (RefPtr extensionController = page->webExtensionControllerProxy())
-            return extensionController->inTestingMode();
+    Ref extensionContext = this->extensionContext();
+    if (extensionContext->isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
         return false;
-    }
+
+    if (name == "connectNative"_s || name == "sendNativeMessage"_s)
+        return extensionContext->hasPermission("nativeMessaging"_s);
 
     ASSERT_NOT_REACHED();
     return false;
 }
 
-WebExtensionAPIWebPageRuntime& WebExtensionAPIWebPageNamespace::runtime() const
+void WebExtensionAPIRuntime::getPlatformInfo(Ref<WebExtensionCallbackHandler>&& callback)
 {
-    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime
+    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getPlatformInfo
 
-    if (!m_runtime) {
-        m_runtime = WebExtensionAPIWebPageRuntime::create(contentWorldType());
-        m_runtime->setPropertyPath("runtime"_s, this);
-    }
+#if PLATFORM(MAC)
+    static constexpr auto osValue = "mac"_s;
+#elif PLATFORM(IOS_FAMILY)
+    static constexpr auto osValue = "ios"_s;
+#else
+    static constexpr auto osValue = "unknown"_s;
+#endif
 
-    return *m_runtime;
-}
+#if CPU(X86_64)
+    static constexpr auto archValue = "x86-64"_s;
+#elif CPU(ARM) || CPU(ARM64)
+    static constexpr auto archValue = "arm"_s;
+#else
+    static constexpr auto archValue = "unknown"_s;
+#endif
 
-Ref<WebExtensionAPIWebPageRuntime> WebExtensionAPIWebPageNamespace::protectedRuntime() const
-{
-    return runtime();
-}
-
-WebExtensionAPITest& WebExtensionAPIWebPageNamespace::test()
-{
-    // Documentation: None (Testing Only)
-
-    if (!m_test)
-        m_test = WebExtensionAPITest::create(*this);
-
-    return *m_test;
+    auto globalContext = callback->globalContext();
+    callback->call(fromObject(callback->globalContext(), {
+        { "os"_s, JSValueMakeString(globalContext, toJSString(osValue).get()) },
+        { "arch"_s, JSValueMakeString(globalContext, toJSString(archValue).get()) }
+    }));
 }
 
 } // namespace WebKit

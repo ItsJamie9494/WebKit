@@ -30,12 +30,15 @@
     DispatchedTo=WebContent
 ]
 messages -> WebExtensionContextProxy {
+#if PLATFORM(COCOA)
     // Action
     DispatchActionClickedEvent(std::optional<WebKit::WebExtensionTabParameters> tabParameters)
+#endif
 
     // Alarms
     DispatchAlarmsEvent(struct WebKit::WebExtensionAlarmParameters alarmInfo)
 
+#if PLATFORM(COCOA)
     // Commands
     DispatchCommandsCommandEvent(String identifier, std::optional<WebKit::WebExtensionTabParameters> tabParameters)
     DispatchCommandsChangedEvent(String identifier, String oldShortcut, String newShortcut)
@@ -58,8 +61,10 @@ messages -> WebExtensionContextProxy {
     DispatchDevToolsPanelsThemeChangedEvent(Inspector::ExtensionAppearance appearance)
 #endif
 
+#endif
     // Extension
     SetBackgroundPageIdentifier(WebCore::PageIdentifier pageID)
+#if PLATFORM(COCOA)
     AddPopupPageIdentifier(WebCore::PageIdentifier pageID, std::optional<WebKit::WebExtensionTabIdentifier> tabIdentifier, std::optional<WebKit::WebExtensionWindowIdentifier> windowIdentifier)
     AddTabPageIdentifier(WebCore::PageIdentifier pageID, WebKit::WebExtensionTabIdentifier tabIdentifier, std::optional<WebKit::WebExtensionWindowIdentifier> windowIdentifier)
 
@@ -94,12 +99,14 @@ messages -> WebExtensionContextProxy {
     DispatchTabsActivatedEvent(WebKit::WebExtensionTabIdentifier previousActiveTabIdentifier, WebKit::WebExtensionTabIdentifier newActiveTabIdentifier, WebKit::WebExtensionWindowIdentifier windowIdentifier)
     DispatchTabsHighlightedEvent(Vector<WebKit::WebExtensionTabIdentifier> tabs, WebKit::WebExtensionWindowIdentifier windowIdentifier)
     DispatchTabsRemovedEvent(WebKit::WebExtensionTabIdentifier tabIdentifier, WebKit::WebExtensionWindowIdentifier windowIdentifier, WebKit::WebExtensionContext::WindowIsClosing windowIsClosing)
+#endif
 
     // Test Events
     DispatchTestMessageEvent(String message, String argumentJSON, WebKit::WebExtensionContentWorldType contentWorldType)
     DispatchTestStartedEvent(String argumentJSON, WebKit::WebExtensionContentWorldType contentWorldType)
     DispatchTestFinishedEvent(String argumentJSON, WebKit::WebExtensionContentWorldType contentWorldType)
 
+#if PLATFORM(COCOA)
     // Web Navigation
     DispatchWebNavigationEvent(WebKit::WebExtensionEventListenerType type, WebKit::WebExtensionTabIdentifier tabID, struct WebKit::WebExtensionFrameParameters frameParamaters, WallTime timestamp)
 
@@ -112,6 +119,7 @@ messages -> WebExtensionContextProxy {
 
     // Windows
     DispatchWindowsEvent(WebKit::WebExtensionEventListenerType type, std::optional<WebKit::WebExtensionWindowParameters> windowParameters)
+#endif
 }
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

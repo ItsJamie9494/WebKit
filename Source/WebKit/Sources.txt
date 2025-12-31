@@ -609,6 +609,7 @@ UIProcess/Extensions/WebExtensionMatchPattern.cpp
 UIProcess/Extensions/WebExtensionStorageSQLiteStore.cpp
 
 UIProcess/Extensions/API/WebExtensionContextAPIAlarms.cpp
+UIProcess/Extensions/API/WebExtensionContextAPIEvent.cpp
 UIProcess/Extensions/API/WebExtensionContextAPIDeclarativeNetRequest.cpp
 UIProcess/Extensions/API/WebExtensionContextAPIStorage.cpp
 
@@ -698,7 +699,11 @@ WebProcess/Extensions/WebExtensionControllerProxy.cpp
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.cpp
 
 WebProcess/Extensions/API/WebExtensionAPIAlarms.cpp
+WebProcess/Extensions/API/WebExtensionAPINamespace.cpp
+WebProcess/Extensions/API/WebExtensionAPIEvent.cpp
+WebProcess/Extensions/API/WebExtensionAPIRuntime.cpp
 WebProcess/Extensions/API/WebExtensionAPITest.cpp
+WebProcess/Extensions/API/WebExtensionAPIWebPageNamespace.cpp
 
 WebProcess/FileAPI/BlobRegistryProxy.cpp
 

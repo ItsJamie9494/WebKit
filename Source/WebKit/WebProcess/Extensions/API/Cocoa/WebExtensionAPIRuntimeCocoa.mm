@@ -157,19 +157,6 @@ bool WebExtensionAPIRuntime::parseConnectOptions(NSDictionary *options, std::opt
     return true;
 }
 
-bool WebExtensionAPIRuntime::isPropertyAllowed(const ASCIILiteral& name, WebPage*)
-{
-    Ref extensionContext = this->extensionContext();
-    if (extensionContext->isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
-        return false;
-
-    if (name == "connectNative"_s || name == "sendNativeMessage"_s)
-        return extensionContext->hasPermission("nativeMessaging"_s);
-
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
 NSURL *WebExtensionAPIRuntime::getURL(const String& resourcePath, NSString **outExceptionString)
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getURL
@@ -177,7 +164,7 @@ NSURL *WebExtensionAPIRuntime::getURL(const String& resourcePath, NSString **out
     return URL { extensionContext().baseURL(), resourcePath }.createNSURL().autorelease();
 }
 
-NSDictionary *WebExtensionAPIRuntime::getManifest()
+RefPtr<JSON::Value> WebExtensionAPIRuntime::getManifest()
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getManifest
 
@@ -186,7 +173,9 @@ NSDictionary *WebExtensionAPIRuntime::getManifest()
 
 String WebExtensionAPIRuntime::getVersion()
 {
-    return objectForKey<NSString>(extensionContext().manifest(), versionKey);
+    if (RefPtr object = extensionContext().manifest()->asObject())
+        return object->getString(versionKey);
+    return nullString();
 }
 
 String WebExtensionAPIRuntime::runtimeIdentifier()
@@ -194,33 +183,6 @@ String WebExtensionAPIRuntime::runtimeIdentifier()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/id
 
     return extensionContext().uniqueIdentifier();
-}
-
-void WebExtensionAPIRuntime::getPlatformInfo(Ref<WebExtensionCallbackHandler>&& callback)
-{
-    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getPlatformInfo
-
-#if PLATFORM(MAC)
-    static constexpr auto osValue = "mac"_s;
-#elif PLATFORM(IOS_FAMILY)
-    static constexpr auto osValue = "ios"_s;
-#else
-    static constexpr auto osValue = "unknown"_s;
-#endif
-
-#if CPU(X86_64)
-    static constexpr auto archValue = "x86-64"_s;
-#elif CPU(ARM) || CPU(ARM64)
-    static constexpr auto archValue = "arm"_s;
-#else
-    static constexpr auto archValue = "unknown"_s;
-#endif
-
-    auto globalContext = callback->globalContext();
-    callback->call(fromObject(callback->globalContext(), {
-        { "os"_s, JSValueMakeString(globalContext, toJSString(osValue).get()) },
-        { "arch"_s, JSValueMakeString(globalContext, toJSString(archValue).get()) }
-    }));
 }
 
 void WebExtensionAPIRuntime::getBackgroundPage(Ref<WebExtensionCallbackHandler>&& callback)

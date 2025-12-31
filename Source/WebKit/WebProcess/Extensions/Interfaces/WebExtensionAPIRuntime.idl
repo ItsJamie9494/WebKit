@@ -26,37 +26,38 @@
 [
     Conditional=WK_WEB_EXTENSIONS,
     ReturnsPromiseWhenCallbackIsOmitted,
+    UseCPPAPI
 ] interface WebExtensionAPIRuntime {
 
-    [ImplementedAs=runtimeIdentifier] readonly attribute DOMString id;
+    [CocoaOnly, ImplementedAs=runtimeIdentifier] readonly attribute DOMString id;
 
-    [URL, ConvertNullStringTo=Null, RaisesException] DOMString getURL(DOMString resourcePath);
-    [NSDictionary] any getManifest();
-    DOMString getVersion();
-    double getFrameId(any target);
+    [CocoaOnly, URL, ConvertNullStringTo=Null, RaisesException] DOMString getURL(DOMString resourcePath);
+    [CocoaOnly, NSDictionary] any getManifest();
+    [CocoaOnly] DOMString getVersion();
+    [CocoaOnly] double getFrameId(any target);
 
     [MainWorldOnly] void getPlatformInfo([Optional, CallbackHandler] function callback);
-    [MainWorldOnly] void getBackgroundPage([Optional, CallbackHandler] function callback);
+    [CocoaOnly, MainWorldOnly] void getBackgroundPage([Optional, CallbackHandler] function callback);
 
-    [MainWorldOnly] void setUninstallURL([URL] DOMString url, [Optional, CallbackHandler] function callback);
+    [CocoaOnly, MainWorldOnly] void setUninstallURL([URL] DOMString url, [Optional, CallbackHandler] function callback);
 
-    [MainWorldOnly] void openOptionsPage([Optional, CallbackHandler] function callback);
-    [MainWorldOnly] void reload();
+    [CocoaOnly, MainWorldOnly] void openOptionsPage([Optional, CallbackHandler] function callback);
+    [CocoaOnly, MainWorldOnly] void reload();
 
-    [MainWorldOnly] readonly attribute any lastError;
+    [CocoaOnly, MainWorldOnly] readonly attribute any lastError;
 
-    [ProcessArgumentsLeftToRight, RaisesException, NeedsPageIdentifier, NeedsFrame] void sendMessage([Optional] DOMString extensionID, [Serialization=JSON] any message, [Optional, NSDictionary] any options, [Optional, CallbackHandler] function callback);
-    [RaisesException, NeedsPageIdentifier, NeedsFrame, NeedsScriptContext] WebExtensionAPIPort connect([Optional] DOMString extensionID, [Optional, NSDictionary] any options);
+    [CocoaOnly, ProcessArgumentsLeftToRight, RaisesException, NeedsPageIdentifier, NeedsFrame] void sendMessage([Optional] DOMString extensionID, [Serialization=JSON] any message, [Optional, NSDictionary] any options, [Optional, CallbackHandler] function callback);
+    [CocoaOnly, RaisesException, NeedsPageIdentifier, NeedsFrame, NeedsScriptContext] WebExtensionAPIPort connect([Optional] DOMString extensionID, [Optional, NSDictionary] any options);
 
-    [MainWorldOnly, Dynamic, NeedsFrame] void sendNativeMessage([Optional] DOMString applicationID, [Serialization=JSON] any message, [Optional, CallbackHandler] function callback);
-    [MainWorldOnly, Dynamic, NeedsPageIdentifier, NeedsScriptContext] WebExtensionAPIPort connectNative([Optional] DOMString applicationID);
+    [CocoaOnly, MainWorldOnly, Dynamic, NeedsFrame] void sendNativeMessage([Optional] DOMString applicationID, [Serialization=JSON] any message, [Optional, CallbackHandler] function callback);
+    [CocoaOnly, MainWorldOnly, Dynamic, NeedsPageIdentifier, NeedsScriptContext] WebExtensionAPIPort connectNative([Optional] DOMString applicationID);
 
-    readonly attribute WebExtensionAPIEvent onConnect;
-    readonly attribute WebExtensionAPIEvent onMessage;
+    [CocoaOnly] readonly attribute WebExtensionAPIEvent onConnect;
+    [CocoaOnly] readonly attribute WebExtensionAPIEvent onMessage;
 
-    [MainWorldOnly] readonly attribute WebExtensionAPIEvent onConnectExternal;
-    [MainWorldOnly] readonly attribute WebExtensionAPIEvent onMessageExternal;
-    [MainWorldOnly] readonly attribute WebExtensionAPIEvent onStartup;
-    [MainWorldOnly] readonly attribute WebExtensionAPIEvent onInstalled;
+    [CocoaOnly, MainWorldOnly] readonly attribute WebExtensionAPIEvent onConnectExternal;
+    [CocoaOnly, MainWorldOnly] readonly attribute WebExtensionAPIEvent onMessageExternal;
+    [CocoaOnly, MainWorldOnly] readonly attribute WebExtensionAPIEvent onStartup;
+    [CocoaOnly, MainWorldOnly] readonly attribute WebExtensionAPIEvent onInstalled;
 
 };

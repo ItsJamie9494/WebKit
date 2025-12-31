@@ -63,7 +63,10 @@ public:
 
     bool operator==(const WebExtensionControllerProxy& other) const { return (this == &other); }
 
-    bool inTestingMode() { return m_testingMode; }
+    bool inTestingMode()
+    {
+        return m_testingMode;
+    }
 
     void globalObjectIsAvailableForFrame(WebPage&, WebFrame&, WebCore::DOMWrapperWorld&);
     void serviceWorkerGlobalObjectIsAvailableForFrame(WebPage&, WebFrame&, WebCore::DOMWrapperWorld&);

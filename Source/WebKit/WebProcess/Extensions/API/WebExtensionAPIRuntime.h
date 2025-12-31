@@ -44,8 +44,10 @@ class WebExtensionAPIRuntime;
 
 class WebExtensionAPIRuntimeBase : public JSWebExtensionWrappable {
 public:
+#if PLATFORM(COCOA)
     JSValue *reportError(String errorMessage, JSGlobalContextRef, NOESCAPE const Function<void()>& = nullptr);
     JSValue *reportError(const String& errorMessage, WebExtensionCallbackHandler&);
+#endif
 
 private:
     friend class WebExtensionAPIRuntime;
@@ -64,13 +66,13 @@ public:
     WebExtensionAPIRuntime& runtime() const final { return const_cast<WebExtensionAPIRuntime&>(*this); }
     Ref<WebExtensionAPIRuntime> protectedRuntime() const { return runtime(); }
 
-#if PLATFORM(COCOA)
     bool isPropertyAllowed(const ASCIILiteral& propertyName, WebPage*);
-
-    NSURL *getURL(const String& resourcePath, NSString **outExceptionString);
-    NSDictionary *getManifest();
-    String getVersion();
     void getPlatformInfo(Ref<WebExtensionCallbackHandler>&&);
+
+#if PLATFORM(COCOA)
+    NSURL *getURL(const String& resourcePath, NSString **outExceptionString);
+    RefPtr<JSON::Value> getManifest();
+    String getVersion();
     void getBackgroundPage(Ref<WebExtensionCallbackHandler>&&);
     double getFrameId(JSValue *);
 
@@ -123,7 +125,9 @@ public:
 #endif
 };
 
+#if PLATFORM(COCOA)
 NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters&);
+#endif
 
 } // namespace WebKit
 

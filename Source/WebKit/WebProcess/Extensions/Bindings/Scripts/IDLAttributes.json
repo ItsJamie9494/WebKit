@@ -23,6 +23,9 @@
             "values": ["*"],
             "supportsConjunction": true
         },
+        "CocoaOnly": {
+            "contextsAllowed": ["interface", "namespace", "dictionary", "dictionary-member", "enum", "attribute", "operation", "constant", "callback-function", "includes"]
+        },
         "CallbackHandler": {
             "contextsAllowed": ["argument"]
         },

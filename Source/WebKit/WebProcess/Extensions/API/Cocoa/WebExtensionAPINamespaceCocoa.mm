@@ -33,80 +33,8 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #import "CocoaHelpers.h"
-#import "WKWebExtensionPermission.h"
-#import "WebExtensionControllerProxy.h"
-
-#if ENABLE(INSPECTOR_EXTENSIONS) || ENABLE(WK_WEB_EXTENSIONS_SIDEBAR) ||  ENABLE(WK_WEB_EXTENSIONS_BOOKMARKS)
-#import "WebPage.h"
-#import <WebCore/Page.h>
-#import <WebCore/Settings.h>
-#endif
 
 namespace WebKit {
-
-bool WebExtensionAPINamespace::isPropertyAllowed(const ASCIILiteral& name, WebPage* page)
-{
-    Ref extensionContext = this->extensionContext();
-    if (extensionContext->isUnsupportedAPI(propertyPath(), name)) [[unlikely]]
-        return false;
-
-    if (name == "action"_s)
-        return extensionContext->supportsManifestVersion(3) && objectForKey<NSDictionary>(extensionContext->manifest(), @"action", false);
-
-#if ENABLE(WK_WEB_EXTENSIONS_BOOKMARKS)
-    if (name == "bookmarks"_s)
-        return page->corePage()->settings().webExtensionBookmarksEnabled() && extensionContext->hasPermission("bookmarks"_s);
-#endif
-
-    if (name == "commands"_s)
-        return objectForKey<NSDictionary>(extensionContext->manifest(), @"commands", false);
-
-    if (name == "declarativeNetRequest"_s)
-        return extensionContext->hasPermission(name) || extensionContext->hasPermission("declarativeNetRequestWithHostAccess"_s);
-
-    if (name == "browserAction"_s)
-        return !extensionContext->supportsManifestVersion(3) && objectForKey<NSDictionary>(extensionContext->manifest(), @"browser_action", false);
-
-#if ENABLE(INSPECTOR_EXTENSIONS)
-    if (name == "devtools"_s)
-        return objectForKey<NSString>(extensionContext->manifest(), @"devtools_page") && page && (page->isInspectorPage() || extensionContext->isInspectorBackgroundPage(*page));
-#else
-    if (name == "devtools"_s)
-        return false;
-#endif
-
-    if (name == "notifications"_s) {
-        // FIXME: <rdar://problem/57202210> Add support for browser.notifications.
-        // Notifications are currently only available in test mode as an empty stub.
-        if (!extensionContext->inTestingMode())
-            return false;
-        goto finish;
-    }
-
-    if (name == "pageAction"_s)
-        return !extensionContext->supportsManifestVersion(3) && objectForKey<NSDictionary>(extensionContext->manifest(), @"page_action", false);
-
-#if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
-    // If the extension requests both sidePanel and sidebarAction, we will give them sidebarAction --
-    // we check in sidePanel that there is no sidebar_action key, but we do not check in sidebarAction
-    // that there is no sidePanel permission
-    if (name == "sidePanel"_s)
-        return page->corePage()->settings().webExtensionSidebarEnabled() && extensionContext->hasPermission("sidePanel"_s) && !objectForKey<NSDictionary>(extensionContext->manifest(), @"sidebar_action", true);
-    if (name == "sidebarAction"_s)
-        return page->corePage()->settings().webExtensionSidebarEnabled() && objectForKey<NSDictionary>(extensionContext->manifest(), @"sidebar_action", true);
-#endif // ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
-
-    if (name == "storage"_s)
-        return extensionContext->hasPermission(name) || extensionContext->hasPermission("unlimitedStorage"_s);
-
-    if (name == "test"_s)
-        return extensionContext->inTestingMode();
-
-finish:
-    // The rest of the property names marked dynamic in WebExtensionAPINamespace.idl match permission names.
-    // Check for the permission to determine if the property is allowed to be accessed.
-    return extensionContext->hasPermission(name);
-}
 
 WebExtensionAPIAction& WebExtensionAPINamespace::action()
 {
@@ -116,16 +44,6 @@ WebExtensionAPIAction& WebExtensionAPINamespace::action()
         m_action = WebExtensionAPIAction::create(*this);
 
     return *m_action;
-}
-
-WebExtensionAPIAlarms& WebExtensionAPINamespace::alarms()
-{
-    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/alarms
-
-    if (!m_alarms)
-        m_alarms = WebExtensionAPIAlarms::create(*this);
-
-    return *m_alarms;
 }
 
 WebExtensionAPICommands& WebExtensionAPINamespace::commands()
@@ -230,18 +148,6 @@ WebExtensionAPIPermissions& WebExtensionAPINamespace::permissions()
     return *m_permissions;
 }
 
-WebExtensionAPIRuntime& WebExtensionAPINamespace::runtime() const
-{
-    // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime
-
-    if (!m_runtime) {
-        m_runtime = WebExtensionAPIRuntime::create(contentWorldType(), protectedExtensionContext());
-        m_runtime->setPropertyPath("runtime"_s, this);
-    }
-
-    return *m_runtime;
-}
-
 WebExtensionAPIScripting& WebExtensionAPINamespace::scripting()
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/scripting
@@ -304,16 +210,6 @@ WebExtensionAPITabs& WebExtensionAPINamespace::tabs()
         m_tabs = WebExtensionAPITabs::create(*this);
 
     return *m_tabs;
-}
-
-WebExtensionAPITest& WebExtensionAPINamespace::test()
-{
-    // Documentation: None (Testing Only)
-
-    if (!m_test)
-        m_test = WebExtensionAPITest::create(*this);
-
-    return *m_test;
 }
 
 WebExtensionAPIWindows& WebExtensionAPINamespace::windows()

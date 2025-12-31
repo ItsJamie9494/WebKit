@@ -64,11 +64,13 @@ class WebExtensionAPINamespace : public WebExtensionAPIObject, public JSWebExten
     WEB_EXTENSION_DECLARE_JS_WRAPPER_CLASS(WebExtensionAPINamespace, namespace, browser);
 
 public:
-#if PLATFORM(COCOA)
     bool isPropertyAllowed(const ASCIILiteral& propertyName, WebPage*);
 
+#if PLATFORM(COCOA)
     WebExtensionAPIAction& action();
+#endif
     WebExtensionAPIAlarms& alarms();
+#if PLATFORM(COCOA)
     WebExtensionAPIAction& browserAction() { return action(); }
     WebExtensionAPICommands& commands();
     WebExtensionAPICookies& cookies();
@@ -84,8 +86,10 @@ public:
     WebExtensionAPINotifications& notifications();
     WebExtensionAPIAction& pageAction() { return action(); }
     WebExtensionAPIPermissions& permissions();
+#endif
     WebExtensionAPIRuntime& runtime() const final;
     Ref<WebExtensionAPIRuntime> protectedRuntime() const { return runtime(); }
+#if PLATFORM(COCOA)
     WebExtensionAPIScripting& scripting();
 #if ENABLE(WK_WEB_EXTENSIONS_SIDEBAR)
     WebExtensionAPISidePanel& sidePanel();

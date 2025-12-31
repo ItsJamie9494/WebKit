@@ -43,11 +43,11 @@ public:
     using ListenerVector = Vector<RefPtr<WebExtensionCallbackHandler>>;
 
 #if PLATFORM(COCOA)
-    void invokeListeners();
     void invokeListenersWithArgument(id argument);
     void invokeListenersWithArgument(id argument1, id argument2);
     void invokeListenersWithArgument(id argument1, id argument2, id argument3);
 #endif
+    void invokeListeners();
     void invokeListenersWithJSONArgument(const String& argument1);
     void invokeListenersWithJSONArgument(const String& argument1, const String& argument2);
 
