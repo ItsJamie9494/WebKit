@@ -209,6 +209,11 @@ JSValueRef toWindowObject(JSContextRef, WebPage&);
 
 RefPtr<JSON::Value> fromJSValue(JSContextRef, JSValueRef);
 RefPtr<JSON::Value> toJSONValue(JSContextRef, JSValueRef, NullValuePolicy = NullValuePolicy::NotAllowed, ValuePolicy = ValuePolicy::Recursive);
+inline JSValueRef toJSValueRefOrJSNull(JSContextRef context, RefPtr<JSON::Object> value)
+{
+    ASSERT(context);
+    return fromJSON(context, value->asValue());
+}
 
 #ifdef __OBJC__
 

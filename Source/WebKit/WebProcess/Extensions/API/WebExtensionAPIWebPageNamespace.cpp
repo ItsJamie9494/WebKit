@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Igalia, S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,21 +24,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !__has_feature(objc_arc)
-#error This file requires ARC. Add the "-fobjc-arc" compiler flag for this file.
-#endif
-
-#import "config.h"
-#import "WebExtensionAPIWebPageNamespace.h"
+#include "config.h"
+#include "WebExtensionAPIWebPageNamespace.h"
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
-#import "WebExtensionAPINamespace.h"
-#import "WebExtensionAPIRuntime.h"
-#import "WebExtensionAPITest.h"
-#import "WebExtensionContextProxy.h"
-#import "WebExtensionControllerProxy.h"
-#import "WebPage.h"
+#include "WebExtensionAPINamespace.h"
+#include "WebExtensionAPIRuntime.h"
+#include "WebExtensionAPITest.h"
+#include "WebExtensionContextProxy.h"
+#include "WebExtensionControllerProxy.h"
+#include "WebPage.h"
 
 namespace WebKit {
 

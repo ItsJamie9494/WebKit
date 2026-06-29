@@ -1073,7 +1073,6 @@ EXTENSION_INTERFACES = \
     WebExtensionAPIExtension \
     WebExtensionAPILocalization \
     WebExtensionAPIMenus \
-    WebExtensionAPINamespace \
     WebExtensionAPINotifications \
     WebExtensionAPIPermissions \
     WebExtensionAPIPort \
@@ -1086,7 +1085,6 @@ EXTENSION_INTERFACES = \
     WebExtensionAPITabs \
     WebExtensionAPIWebNavigation \
     WebExtensionAPIWebNavigationEvent \
-    WebExtensionAPIWebPageNamespace \
     WebExtensionAPIWebPageRuntime \
     WebExtensionAPIWebRequest \
     WebExtensionAPIWebRequestEvent \
@@ -1096,7 +1094,9 @@ EXTENSION_INTERFACES = \
 
 CPP_EXTENSION_INTERFACES = \
 	WebExtensionAPIAlarms \
+    WebExtensionAPINamespace \
     WebExtensionAPITest \
+	WebExtensionAPIWebPageNamespace \
 #
 
 $(IDL_FILE_NAMES_LIST) : $(EXTENSION_INTERFACES:%=%.idl)
