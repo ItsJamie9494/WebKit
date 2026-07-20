@@ -142,7 +142,6 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 
 set(WebKit_BINDINGS_IN_FILES
     WebProcess/Extensions/Interfaces/WebExtensionAPIAction
-    WebProcess/Extensions/Interfaces/WebExtensionAPIAlarms
     WebProcess/Extensions/Interfaces/WebExtensionAPIBookmarks
     WebProcess/Extensions/Interfaces/WebExtensionAPICommands
     WebProcess/Extensions/Interfaces/WebExtensionAPICookies
@@ -179,6 +178,7 @@ set(WebKit_BINDINGS_IN_FILES
 )
 
 set(WebKit_CPP_BINDINGS_IN_FILES
+    WebProcess/Extensions/Interfaces/WebExtensionAPIAlarms
     WebProcess/Extensions/Interfaces/WebExtensionAPITest
 )
 
@@ -1115,6 +1115,7 @@ macro(GENERATE_IDL_BINDINGS _output_source _inputs _cpp_inputs)
 
             ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.h
         )
+        list(APPEND _cpp_import_names JS${_name}.cpp)
         list(APPEND ${_output_source} ${WebKit_DERIVED_SOURCES_DIR}/JS${_name}.h)
     endforeach ()
 
@@ -1122,6 +1123,7 @@ macro(GENERATE_IDL_BINDINGS _output_source _inputs _cpp_inputs)
         OUTPUT
             ${_outputs}
             ${WebKit_DERIVED_SOURCES_DIR}/JSWebExtensionAPIUnified.mm
+            ${WebKit_DERIVED_SOURCES_DIR}/JSWebExtensionAPIUnified.cpp
         MAIN_DEPENDENCY ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl
         DEPENDS
             ${_input_files}
@@ -1132,7 +1134,8 @@ macro(GENERATE_IDL_BINDINGS _output_source _inputs _cpp_inputs)
            "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/GenerateImports.pl"
            "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/IDLAttributes.json"
         COMMAND ${PERL_EXECUTABLE} -I "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts" ${WEBCORE_DIR}/bindings/scripts/generate-bindings.pl --outputDir . --generator Extensions --idlAttributesFile "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/IDLAttributes.json" --idlFileNamesList WebExtensionIDLFileNamesList.txt ${_input_files}
-        COMMAND ${PERL_EXECUTABLE} "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/GenerateImports.pl" JSWebExtensionAPIUnified.mm ${_import_names}
+        COMMAND ${PERL_EXECUTABLE} "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/GenerateImports.pl" --output=JSWebExtensionAPIUnified.mm -- ${_import_names}
+        COMMAND ${PERL_EXECUTABLE} "${WEBKIT_DIR}/WebProcess/Extensions/Bindings/Scripts/GenerateImports.pl" --cpp --output=JSWebExtensionAPIUnified.cpp -- ${_cpp_import_names}
         WORKING_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR}
         VERBATIM
     )

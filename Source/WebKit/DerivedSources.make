@@ -1059,7 +1059,6 @@ BINDINGS_SCRIPTS = \
 
 EXTENSION_INTERFACES = \
     WebExtensionAPIAction \
-    WebExtensionAPIAlarms \
     WebExtensionAPIBookmarks \
     WebExtensionAPICommands \
     WebExtensionAPICookies \
@@ -1096,6 +1095,7 @@ EXTENSION_INTERFACES = \
 #
 
 CPP_EXTENSION_INTERFACES = \
+	WebExtensionAPIAlarms \
     WebExtensionAPITest \
 #
 
@@ -1115,9 +1115,13 @@ JS%.h JS%.cpp : %.idl $(BINDINGS_SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(FEATURE_AND_P
 
 JSWebExtensionAPIUnified.mm: $(BINDINGS_SCRIPTS) $(EXTENSION_INTERFACES:%=JS%.mm)
 	@echo "Generating $@..."
-	$(PERL) $(EXTENSIONS_SCRIPTS_DIR)/GenerateImports.pl $@ $(EXTENSION_INTERFACES:%=JS%.mm)
+	$(PERL) $(EXTENSIONS_SCRIPTS_DIR)/GenerateImports.pl --output=$@ -- $(EXTENSION_INTERFACES:%=JS%.mm)
 
-all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_INTERFACES:%=JS%.mm) $(CPP_EXTENSION_INTERFACES:%=JS%.cpp)
+JSWebExtensionAPIUnified.cpp: $(BINDINGS_SCRIPTS) $(EXTENSION_INTERFACES:%=JS%.cpp)
+	@echo "Generating $@..."
+	$(PERL) $(EXTENSIONS_SCRIPTS_DIR)/GenerateImports.pl --output=$@ --cpp -- $(CPP_EXTENSION_INTERFACES:%=JS%.cpp)
+
+all : JSWebExtensionAPIUnified.mm $(EXTENSION_INTERFACES:%=JS%.h) $(EXTENSION_INTERFACES:%=JS%.mm) JSWebExtensionAPIUnified.cpp $(CPP_EXTENSION_INTERFACES:%=JS%.h) $(CPP_EXTENSION_INTERFACES:%=JS%.cpp)
 
 ifeq ($(USE_INTERNAL_SDK),YES)
 WEBKIT_ADDITIONS_SWIFT_FILES = \

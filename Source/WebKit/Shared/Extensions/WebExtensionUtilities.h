@@ -29,6 +29,7 @@
 
 #include "WebExtensionError.h"
 #include <JavaScriptCore/JSBase.h>
+#include <JavaScriptCore/JavaScriptCore.h>
 #include <wtf/Function.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Markable.h>
@@ -69,6 +70,33 @@ JSObjectRef toJSError(JSContextRef, const String& callingAPIName, const String& 
 /// Serializes large data to JSON chunks to avoid StringBuilder overflow.
 void serializeToMultipleJSONStrings(Ref<JSON::Object>, Function<void(String&&)>&&);
 
+enum class UseNullValue : bool { No, Yes };
+
+template<typename T>
+JSValueRef toWebAPI(JSContextRef context, const std::optional<T>& result, UseNullValue useNull = UseNullValue::Yes)
+{
+    if (!result)
+        return useNull == UseNullValue::Yes ? JSValueMakeNull(context) : JSValueMakeUndefined(context);
+    return toWebAPI(context, result.value());
+}
+
+template <typename T>
+static JSObjectRef toWebAPI(JSContextRef context, const Vector<T>& data)
+{
+    if (data.isEmpty())
+        return JSObjectMakeArray(context, 0, nullptr, nullptr);
+
+    auto convertedData = WTF::map<8>(data, [&](auto& originalValue) {
+        JSValueRef convertedValue = toWebAPI(context, originalValue);
+        return convertedValue;
+    });
+
+    JSObjectRef array = JSObjectMakeArray(context, convertedData.size(), convertedData.span().data(), nullptr);
+    return array;
+}
+
+bool validateDictionary(RefPtr<JSON::Value> dictionary, const String& sourceKey, Vector<String> requiredKeys, HashMap<String, JSON::Value::Type> keyTypes, String& outExceptionString);
+
 #ifdef __OBJC__
 
 /// Verifies that a dictionary:
@@ -104,8 +132,6 @@ size_t storageSizeOf(NSDictionary<NSString *, NSString *> *);
 
 /// Returns true if the size of any item in the dictionary exceeds the given quota.
 bool anyItemsExceedQuota(NSDictionary *, size_t quota, NSString **outKeyWithError = nullptr);
-
-enum class UseNullValue : bool { No, Yes };
 
 template<typename T>
 id toWebAPI(const std::optional<T>& result, UseNullValue useNull = UseNullValue::Yes)
