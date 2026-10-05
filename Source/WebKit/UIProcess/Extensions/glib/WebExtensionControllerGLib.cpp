@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Igalia S.L.
+ * Copyright (C) 2026 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,18 +17,17 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#pragma once
+#include "config.h"
+#include "WebExtensionController.h"
 
-#include "WebKitWebsiteDataPrivate.h"
-#include "WebResourceLoadStatisticsStore.h"
-#include "WebsiteDataStore.h"
-#include <wtf/glib/GUniquePtr.h>
-#include <wtf/text/CString.h>
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-#if ENABLE(2022_GLIB_API)
-WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(UTF8CString&&, UTF8CString&&);
-#endif
-WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteDataManager*);
+namespace WebKit {
 
-WebKitITPThirdParty* webkitITPThirdPartyCreate(WebKit::ITPThirdPartyData&&);
-OptionSet<WebKit::WebsiteDataType> toWebsiteDataTypes(WebKitWebsiteDataTypes);
+void WebExtensionController::initializePlatform()
+{
+}
+
+} // namespace WebKit
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

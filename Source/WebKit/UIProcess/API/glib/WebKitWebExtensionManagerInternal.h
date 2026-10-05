@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Igalia S.L.
+ * Copyright (C) 2026 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,16 +19,17 @@
 
 #pragma once
 
-#include "WebKitWebsiteDataPrivate.h"
-#include "WebResourceLoadStatisticsStore.h"
-#include "WebsiteDataStore.h"
-#include <wtf/glib/GUniquePtr.h>
-#include <wtf/text/CString.h>
+#include "WebKitWebExtensionManager.h"
+#include <WebKit/WKBase.h>
 
-#if ENABLE(2022_GLIB_API)
-WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(UTF8CString&&, UTF8CString&&);
-#endif
-WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteDataManager*);
+#if ENABLE(WK_WEB_EXTENSIONS)
 
-WebKitITPThirdParty* webkitITPThirdPartyCreate(WebKit::ITPThirdPartyData&&);
-OptionSet<WebKit::WebsiteDataType> toWebsiteDataTypes(WebKitWebsiteDataTypes);
+// Private API required by the unit tests
+
+typedef struct _WebKitWebExtensionManager WebKitWebExtensionManager;
+
+WK_EXPORT WebKitWebExtensionManager *webkitWebExtensionManagerNewWithTemporaryConfiguration(void);
+WK_EXPORT gboolean webkitWebExtensionManagerGetIsTemporary(WebKitWebExtensionManager*);
+WK_EXPORT const gchar *webkitWebExtensionManagerGetStorageDirectoryPath(WebKitWebExtensionManager*);
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)
