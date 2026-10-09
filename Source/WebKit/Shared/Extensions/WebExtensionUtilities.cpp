@@ -320,6 +320,48 @@ bool validateDictionary(RefPtr<JSON::Value> dictionary, const String& sourceKey,
     return errorString.isEmpty();
 }
 
+static bool validateArray(const String& sourceKey, RefPtr<JSON::Value> value, Vector<JSON::Value::Type> expectedArrayType, String& outExceptionString)
+{
+    // FIXME: Do we want to allow sizes of greater than 1?
+    ASSERT(expectedArrayType.size() == 1);
+    if (!value || !value->asArray()) {
+        outExceptionString = constructExpectedMessage(sourceKey, makeString("an array of"_s, classToClassString(expectedArrayType.first())), valueToTypeString(value));
+        return false;
+    }
+
+    RefPtr array = value->asArray();
+    for (auto& element : *array) {
+        String errorString;
+        if (!validate(emptyString(), element.get(), expectedArrayType.first(), errorString)) {
+            outExceptionString = constructExpectedMessage(sourceKey, makeString("an array of"_s, classToClassString(expectedArrayType.first())), valueToTypeString(value));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool validateSet(const String& sourceKey, RefPtr<JSON::Value> value, Vector<JSON::Value::Type> expectedValueType, String& outExceptionString)
+{
+    if (expectedValueType.contains(value->type()))
+        return true;
+
+    // FIXME: more complex validation, error strings
+    return false;
+}
+
+bool validateObject(RefPtr<JSON::Value> value, const String& sourceKey, Vector<JSON::Value::Type> expectedValueType, Vector<JSON::Value::Type> expectedArrayType, String& outExceptionString)
+{
+    ASSERT(!expectedValueType.isEmpty());
+
+    String errorString;
+
+    if (!expectedArrayType.isEmpty() && value->asArray())
+        return validateArray(sourceKey, value, expectedArrayType, outExceptionString);
+
+    return validateSet(sourceKey, value, expectedValueType, outExceptionString);
+}
+
 void callAfterRandomDelay(Function<void()>&& callback)
 {
     // Random delay between 100 and 500 milliseconds.
@@ -327,6 +369,52 @@ void callAfterRandomDelay(Function<void()>&& callback)
     RunLoop::mainSingleton().dispatchAfter(delay, [callback = WTF::move(callback)]() {
         callback();
     });
+}
+
+size_t storageSizeOf(const String& keyOrValue)
+{
+    // The size of a key is the length of the key string.
+    // The size of a value is the length of the JSON representation of the value.
+    // If keyOrValue represents a value we assume that the string is the JSON representation.
+    return keyOrValue.utf8().length();
+}
+
+size_t storageSizeOf(Ref<JSON::Value> keysAndValues)
+{
+    double storageSize = 0;
+    RefPtr object = keysAndValues->asObject();
+
+    // FIXME:
+    if (!object)
+        return storageSize;
+
+    for (const auto& itemValue : *object) {
+        auto key = itemValue.key;
+        auto value = itemValue.value;
+        storageSize += storageSizeOf(key) + storageSizeOf(value->toJSONString());
+    }
+
+    return storageSize;
+}
+
+bool anyItemsExceedQuota(RefPtr<JSON::Value> items, size_t quota, String& outKeyWithError)
+{
+    RefPtr object = items->asObject();
+    if (!object)
+        return true;
+
+    for (const auto& itemValue : *object) {
+        auto key = itemValue.key;
+        auto value = itemValue.value;
+
+        size_t sizeOfCurrentItem = storageSizeOf(key) + storageSizeOf(value);
+        if (sizeOfCurrentItem > quota) {
+            outKeyWithError = key;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 } // namespace WebKit

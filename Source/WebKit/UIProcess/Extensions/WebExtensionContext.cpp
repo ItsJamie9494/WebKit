@@ -1961,6 +1961,19 @@ size_t WebExtensionContext::quotaForStorageType(WebExtensionDataType storageType
     return 0;
 }
 
+void WebExtensionContext::setStorageAccessLevel(WebExtensionDataType dataType, WebExtensionStorageAccessLevel accessLevel)
+{
+    m_storageAccessLevels.set(dataType, accessLevel);
+
+    saveStorageAccessLevelsToStorage();
+
+    if (!isLoaded())
+        return;
+
+    if (RefPtr extensionController = this->extensionController())
+        extensionController->sendToAllProcesses(Messages::WebExtensionContextProxy::SetStorageAccessLevel(dataType, accessLevel), identifier());
+}
+
 Ref<WebExtensionStorageSQLiteStore> WebExtensionContext::localStorageStore()
 {
     if (!m_localStorageStore)
